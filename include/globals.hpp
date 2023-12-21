@@ -18,12 +18,12 @@
 #define pi 3.14159265358979
 
 //omniwheel diameter in mm
-#define tw_diameter 28
+#define tw_diameter 28.0
 
 //base pid
-#define base_kp 1
+#define base_kp 5
 #define base_kd 0
-#define base_error 10
+#define base_error 25
 
 //flipper
 #define flipper_motor 11
@@ -51,7 +51,7 @@
 #define Catadelay 400
 #define Cata_lr_error 2
 #define allowedError 2
-#define cata_target 350
+#define cata_target 0
 #define cata_power 50
 
 //port 20 clip on brain broken
