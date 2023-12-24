@@ -54,6 +54,10 @@
 #define cata_target 0
 #define cata_power 50
 
+#define loading_pos 0
+// #define slipping_pos 355
+#define fire_pos 50
+
 //port 20 clip on brain broken
 // down = 100
 
