@@ -64,11 +64,9 @@
 extern "C" {
 #endif
 
-// void base_l_pid();
-// void base_r_pid();
 void pidmove();
 void pidvalues();
-// void base_brake();
+void base_brake();
 
 void autonomous(void);
 void initialize(void);

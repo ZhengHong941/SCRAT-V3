@@ -16,25 +16,38 @@ double deltaErrorLeft = 0;
 double deltaErrorRight = 0;
 double powerL = 0;
 double powerR = 0;
+double auton_pos[2] = {0,0};
 int i = 0;
-bool step = false;
-bool next = false;
 bool brake = false;
+bool next_movement = true;
+int arrlen = 0;
 
+bool IntakeTargetPosUp = true;
 
-void pidvalues(double* targleft, double* targright){
-	for (i=0; i<5; i++){
-		step = false;
-		LEFTTARGET = targleft[i];
-		RIGHTTARGET = targright[i];
-		errorLeft = targleft[i];
-		errorRight = targright[i];
-		while(not step){
-			pros::delay(2);
-		}
-	}
-	next = true;
-	i = 0;
+// pros::Controller master(CONTROLLER_MASTER);
+
+// void pidvalues(double* targleft, double* targright){
+// 	while (i < arrlen) {
+// 		if(next_movement){
+// 			auton_pos[0] = auton_pos[0] + targleft[i];
+// 			auton_pos[1] = auton_pos[1] + targright[i];
+// 			LEFTTARGET = auton_pos[0];
+// 			errorLeft = auton_pos[0];
+// 			RIGHTTARGET = auton_pos[1];
+// 			errorRight = auton_pos[1];
+// 			pros::delay(2);
+// 			i++;
+// 			next_movement = false;
+// 			pros::delay(2);
+// 		}
+// 	}
+// }
+void pidvalues(double targleft, double targright){
+	LEFTTARGET = targleft;
+	RIGHTTARGET = targright;
+
+	errorLeft = targleft;
+	errorRight = targright;
 }
 
 void pidmove() {
@@ -56,59 +69,38 @@ void pidmove() {
 	rft_base.set_zero_position(0);
     //25 units = 1cm
     //and fabs(errorRight) >= 50
-    while (true){
-        if (fabs(errorLeft) >= 5 ){
-            while (fabs(errorLeft) >= 5 ){
-				encdleft = trackingwheel_l.get_position() * pi * 28 / 36000;
-				encdright = trackingwheel_r.get_position() * pi * 28 / 36000;
-                // encdleft = lft_base.get_position() * pi * 69.85 / 360;
-                // encdright = rft_base.get_position() * pi * 69.85 / 360;
-				// printf("encdleft: %f \n", encdleft);
-				// printf("encdright: %f \n", encdright);
-				//double left_tw = trackingwheel_l.get_position()/100;
-				//printf("encdleft: %f \n", left_tw);
-				//double right_tw = trackingwheel_r.get_position()/100;
-				//printf("encdright:%f \n",right_tw);
-
-                errorLeft = LEFTTARGET - encdleft;
-                errorRight = RIGHTTARGET - encdright;
-
-                deltaErrorLeft = errorLeft - prevErrorLeft;
-                deltaErrorRight = errorRight - prevErrorRight;
-
-                powerL = base_kp * (errorLeft/25) + base_kd * deltaErrorLeft; // divide 25 to prevent from going insane - idk why
-                powerR = base_kp * (errorRight/25) + base_kd * deltaErrorRight;
-
-                lft_base.move(powerL);
-				lfb_base.move(powerL);
-				lbt_base.move(powerL);
-				lbb_base.move(powerL);
-				rft_base.move(powerR);
-				rfb_base.move(powerR);
-				rbt_base.move(powerR);
-				rbb_base.move(powerR);
-
-                //printf("encdleft: %f encdright:%f errorleft:%f errorright:%f deltaerrleft:%f deltaerrright:%f \n",\
-                encdleft, encdright, errorLeft, errorRight, deltaErrorLeft, deltaErrorRight);
-
-                prevErrorLeft = errorLeft;
-                prevErrorRight = errorRight;
-                pros::delay(2);
-            }
-            // lf_base.brake();
-            // lt_base.brake();
-            // lb_base.brake();
-            // rf_base.brake();
-            // rt_base.brake();
-            // rb_base.brake();
-            //printf("stopped");
-			step = true;
-			trackingwheel_l.set_position(0);
-			trackingwheel_r.set_position(0);
-        }
-        pros::delay(2);
-    }
+	while(true){
+		// std::cout << "0" << std::endl;
+		// pros::delay(20);
+		encdleft = trackingwheel_l.get_position() * pi * 28 / 36000;
+		encdright = trackingwheel_r.get_position() * pi * 28 / 36000;
+		errorLeft = LEFTTARGET - encdleft;
+		errorRight = RIGHTTARGET - encdright;
+		deltaErrorLeft = errorLeft - prevErrorLeft;
+		deltaErrorRight = errorRight - prevErrorRight;
+		powerL = base_kp * errorLeft + base_ki * prevErrorLeft + base_kd * deltaErrorLeft; // divide 25 to prevent from going insane - kp must not be too high - when ki=0.1 kd=0,  
+		powerR = base_kp * errorRight + base_ki * prevErrorRight + base_kd * deltaErrorRight;
+		printf("encdleft: %f \n", encdleft);
+		printf("encdright: %f \n", encdright);
+		if (fabs(errorLeft) >= base_error ){
+			lft_base.move(powerL);
+			lfb_base.move(powerL);
+			lbt_base.move(powerL);
+			lbb_base.move(powerL);
+			rft_base.move(powerR);
+			rfb_base.move(powerR);
+			rbt_base.move(powerR);
+			rbb_base.move(powerR);
+			printf("powerL: %f \n", powerL);
+			printf("powerR: %f \n", powerR);
+			pros::delay(2);
+		}
+		prevErrorLeft = errorLeft;
+		prevErrorRight = errorRight;
+		pros::delay(2);
+	}
 }
+
 
 void base_brake() {
 	while(true){
@@ -140,76 +132,133 @@ void base_brake() {
 // }
 
 bool shoot = false;
-bool cata_move = false;
-float cata_error_l;
-float cata_error_r;
-float prev_cata_error;
-float cata_d;
-uint32_t timestamp;
-int correctingPow;
-int currentPos_l;
-int currentPos_r;
+bool move_cata = true;
+double cata_error_l = 0;
+double cata_error_r = 0;
+double prev_cata_error_l = 0;
+double prev_cata_error_r = 0;
+double cata_d_l = 0;
+double cata_d_r = 0;
+int correctingPow_l;
+int correctingPow_r;
+double currentPos_l;
+double currentPos_r;
 
 void cata_pid(){
     using namespace pros;
-    pros::Motor lc(lc_motor, pros::E_MOTOR_GEARSET_36, true, pros::E_MOTOR_ENCODER_DEGREES);
-	pros::Motor rc(rc_motor, pros::E_MOTOR_GEARSET_36, false, pros::E_MOTOR_ENCODER_DEGREES);
+    pros::Motor lc(lc_motor, pros::E_MOTOR_GEARSET_18, false, pros::E_MOTOR_ENCODER_DEGREES);
+	pros::Motor rc(rc_motor, pros::E_MOTOR_GEARSET_18, true, pros::E_MOTOR_ENCODER_DEGREES);
     pros::Rotation catarot_l(catarot_l_port);
 	pros::Rotation catarot_r(catarot_r_port);
-	catarot_r.set_reversed(true);
     while(true){
-		if ((loading_pos <= (catarot_l.get_position() / 100) <= fire_pos) && (loading_pos <= (catarot_r.get_position() / 100) <= fire_pos)) {
-			currentPos_l = catarot_l.get_position() / 100;
-			currentPos_r = catarot_r.get_position() / 100;
-			cata_error_l = currentPos_l - cata_target;
-			cata_error_r = currentPos_r - cata_target;
-			cata_d = cata_error_l - prev_cata_error;
-			prev_cata_error = cata_error_l;
-			correctingPow = cata_error_l * cata_kp + cata_d * cata_kd + cata_power;
-			// printf("CorrectingPow: %i \n", correctingPow);
-			// printf("Error: %i \n", cata_error_l);
-			// printf("Position_l: %i \n", catarot_l.get_position()/100);
-			// printf("Position_r: %i \n", catarot_r.get_position()/100);
-			if(shoot){
-				lc.move(40);
-				rc.move(40);
-				pros::delay(500);
-				shoot = false;
-				pros::delay(Catadelay);
-			}
-			// resetting of cata
-			else if (cata_error_l > allowedError && currentPos_l > cata_target) {
-				// check if left and right position is the same
-				if (fabs(currentPos_l - currentPos_r) < Cata_lr_error) {
-					lc.move(correctingPow);
-					rc.move(correctingPow);
-					// printf("CorrectingPow: %i \n", correctingPow);
-				}
-				else if (cata_error_l > cata_error_r) {
-					lc.move(correctingPow);
-					rc.move(0);
-					// printf("right_cata_motor is slower \n");
-				}
-				else {
-					lc.move(0);
-					rc.move(correctingPow);
-					// printf("left_cata_motor is slower \n");
-				}
+		pros::delay(2);
+		if (not shoot) {std::cout << "shoot = false" << std::endl;}
+		// if ((loading_pos <= (catarot_l.get_angle() / 100) <= fire_pos) && (loading_pos <= (catarot_r.get_angle() / 100) <= fire_pos)) {
+		currentPos_l = catarot_l.get_angle() / 100;
+		currentPos_r = catarot_r.get_angle() / 100;
+		cata_error_l = currentPos_l - cata_target;
+		cata_error_r = currentPos_r - cata_target;
+		cata_d_l = cata_error_l - prev_cata_error_l;
+		cata_d_r = cata_error_r - prev_cata_error_r;
+		correctingPow_l = cata_error_l * cata_kp + cata_d_l * cata_kd;
+		correctingPow_r = cata_error_r * cata_kp + cata_d_r * cata_kd + 12;
+		prev_cata_error_l = cata_error_l;
+		prev_cata_error_r = cata_error_r;
+		// printf("CorrectingPow: %i \n", correctingPow);
+		// printf("Error: %i \n", cata_error_l);
+		// printf("Position_l: %i \n", catarot_l.get_angle()/100);
+		printf("Position_r: %i \n", catarot_r.get_angle()/100);
+		// printf("CorrectingPow_l: %i \n", correctingPow_l);
+		if(shoot){
+			if ((catarot_l.get_angle() / 100) < 40 && (catarot_r.get_angle() / 100) < 40) {
+				lc.move(-55);
+				rc.move(-55);
+				pros::delay(2);
 			}
 			else {
 				lc.move(0);
 				rc.move(0);
-				// printf("not moving \n");
+				shoot = false;
+				pros::delay(Catadelay);
+				// cata_error_l = 0;
+				// cata_d_l = 0;
+				// prev_cata_error_l = 0;
+				// cata_error_r = 0;
+				// cata_d_r = 0;
+				// prev_cata_error_r = 0;
+				pros::delay(2);
 			}
 		}
-		else {
-			printf("catarot_l: %i \n", catarot_l.get_position()/100);
-			printf("catarot_r: %i \n", catarot_r.get_position()/100);
-		}
+
+
+			// resetting of cata
+		// 	else if (cata_error_l > allowedError && currentPos_l > cata_target) {
+		// 		// check if left and right position is the same
+		// 		if (fabs(currentPos_l - currentPos_r) < Cata_lr_error) {
+		// 			lc.move(correctingPow);
+		// 			rc.move(correctingPow);
+		// 			// printf("CorrectingPow: %i \n", correctingPow);
+		// 		}
+		// 		else if (cata_error_l > cata_error_r) {
+		// 			lc.move(correctingPow);
+		// 			rc.move(0);
+		// 			// printf("right_cata_motor is slower \n");
+		// 		}
+		// 		else {
+		// 			lc.move(0);
+		// 			rc.move(correctingPow);
+		// 			// printf("left_cata_motor is slower \n");
+		// 		}
+		// 	}
+		// 	else {
+		// 		lc.move(0);
+		// 		rc.move(0);
+		// 		// printf("not moving \n");
+		// 	}
+		// }
+		// else {
+		// 	printf("catarot_l: %i \n", catarot_l.get_position()/100);
+		// 	printf("catarot_r: %i \n", catarot_r.get_position()/100);
+		// }
     }
 }
 
-bool IntakeTargetPosUp = true;
+void cata_axle() {
+}
+
+void cata_l() {
+	pros::Motor lc(lc_motor, pros::E_MOTOR_GEARSET_18, false, pros::E_MOTOR_ENCODER_DEGREES);
+	while (true) {
+		if ((not shoot) && move_cata){
+			if (cata_error_l > allowedError) {
+				lc.move(-correctingPow_l);
+				printf("correctingPow_l: %i \n", correctingPow_l);
+			}
+			else {
+				lc.move(0);
+			}
+			pros::delay(2);
+		}
+		pros::delay(2);
+	}
+}
+void cata_r() {
+	pros::Motor rc(rc_motor, pros::E_MOTOR_GEARSET_18, true, pros::E_MOTOR_ENCODER_DEGREES);
+	while (true) {
+		if ((not shoot) && move_cata) {
+			if (cata_error_r > allowedError) {
+				rc.move(-correctingPow_r);
+				printf("correctingPow_r: %i \n", correctingPow_r);
+			}
+			else {
+				rc.move(0);
+			}
+		}
+		pros::delay(2);
+	}
+}
+
+// bool IntakeTargetPosUp = true;
 int RollerPow = 0;
 bool Roller_Intake;
 float flipper_error;
@@ -280,7 +329,10 @@ void initialize() {
 	//front rollers
     pros::Motor front_roller(front_roller_motor, pros::E_MOTOR_GEARSET_18, true, pros::E_MOTOR_ENCODER_DEGREES);
 
-	// pros::Task cata(cata_pid);
+	pros::Task cata(cata_pid);
+	pros::Task cataR(cata_r);
+	pros::Task cataL(cata_l);
+	
 	pros::Task flipper(flipper_pid);
 }
 
@@ -292,16 +344,26 @@ void autonomous() {
 	// pros::Task base_l(base_l_pid);
 	// pros::Task base_r(base_r_pid);
 	// pros::Task brakes(base_brake);
+	//clear controller screen
+	// master.clear();
+	// pros::delay(50);
 	pros::Task base_pid(pidmove);
-	pros::delay(10);
+	pros::delay(2);
 
-	double targ_l[] = {600, 600};
-	double targ_r[] = {600, 600};
-	pidvalues(targ_l, targ_r);
-	while (not next){
-		pros::delay(2);
-	}
-	next = false;
+	// double targ_l[] = {600, 600};
+	// double targ_r[] = {600, 600};
+	// arrlen = sizeof(targ_l) / sizeof(targ_l[0]);
+	// pros::delay(2);
+	// pidvalues(targ_l, targ_r);
+	// master.print(2,0,"d",arrlen);
+
+	int a_l = 300;
+	int a_r = 300;
+	int b_l = 600;
+	int b_r = 600;
+	pidvalues(a_l, a_r);
+	// pidvalues(a_l+b_l, a_r+b_r);
+	// pros::delay(400);
 }
 
 
@@ -356,8 +418,9 @@ void opcontrol() {
         rbb_base.move(right);
 		rbt_base.move(right);
 
-		// if(master.get_digital(DIGITAL_R1)){
-        // }
+		if(master.get_digital(DIGITAL_R1)){
+			shoot = true;
+        }
 
 		//flipper control
         //update target speeds for I and update target position for flipper

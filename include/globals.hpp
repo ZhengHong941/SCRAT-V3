@@ -21,9 +21,10 @@
 #define tw_diameter 28.0
 
 //base pid
-#define base_kp 5
-#define base_kd 0
-#define base_error 25
+#define base_kp 0.8
+#define base_ki 0.1
+#define base_kd 100
+#define base_error 2
 
 //flipper
 #define flipper_motor 11
@@ -46,17 +47,17 @@
 #define catarot_r_port 20
 
 //cata pid
-#define cata_kp 1
-#define cata_kd 0
+#define cata_kp 0.3
+#define cata_kd 500
 #define Catadelay 400
 #define Cata_lr_error 2
 #define allowedError 2
 #define cata_target 0
-#define cata_power 50
+#define cata_power 1
 
 #define loading_pos 0
 // #define slipping_pos 355
-#define fire_pos 50
+#define fire_pos 80
 
 //port 20 clip on brain broken
 // down = 100
