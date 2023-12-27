@@ -21,10 +21,10 @@
 #define tw_diameter 28.0
 
 //base pid
-#define base_kp 0.8
+#define base_kp 0.5
 #define base_ki 0.1
-#define base_kd 100
-#define base_error 2
+#define base_kd 5
+#define base_error 1
 
 //flipper
 #define flipper_motor 11
@@ -43,13 +43,13 @@
 //cata
 #define lc_motor 10
 #define rc_motor 19
-#define catarot_l_port 9
-#define catarot_r_port 20
+#define catarot_l_port 9 // 27.33
+#define catarot_r_port 20 // 7.99
 
 //cata pid
 #define cata_kp 0.3
-#define cata_kd 500
-#define Catadelay 400
+#define cata_kd 0
+#define Catadelay 3000
 #define Cata_lr_error 2
 #define allowedError 2
 #define cata_target 0

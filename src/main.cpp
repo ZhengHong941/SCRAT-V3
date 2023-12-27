@@ -24,8 +24,6 @@ int arrlen = 0;
 
 bool IntakeTargetPosUp = true;
 
-// pros::Controller master(CONTROLLER_MASTER);
-
 // void pidvalues(double* targleft, double* targright){
 // 	while (i < arrlen) {
 // 		if(next_movement){
@@ -45,13 +43,12 @@ bool IntakeTargetPosUp = true;
 void pidvalues(double targleft, double targright){
 	LEFTTARGET = targleft;
 	RIGHTTARGET = targright;
-
 	errorLeft = targleft;
 	errorRight = targright;
 }
 
 void pidmove() {
-    using namespace pros;
+    // using namespace pros;
 	pros::Motor lfb_base(lfb_port, pros::E_MOTOR_GEARSET_06, true, pros::E_MOTOR_ENCODER_DEGREES);
 	pros::Motor lft_base(lft_port, pros::E_MOTOR_GEARSET_06, true, pros::E_MOTOR_ENCODER_DEGREES);
 	pros::Motor lbb_base(lbb_port, pros::E_MOTOR_GEARSET_06, true, pros::E_MOTOR_ENCODER_DEGREES);
@@ -65,10 +62,6 @@ void pidmove() {
 	trackingwheel_r.set_reversed(true);
 	trackingwheel_l.set_position(0);
 	trackingwheel_r.set_position(0);
-	lft_base.set_zero_position(0);
-	rft_base.set_zero_position(0);
-    //25 units = 1cm
-    //and fabs(errorRight) >= 50
 	while(true){
 		// std::cout << "0" << std::endl;
 		// pros::delay(20);
@@ -95,9 +88,23 @@ void pidmove() {
 			printf("powerR: %f \n", powerR);
 			pros::delay(2);
 		}
+		else {
+			powerL = 0;
+			powerR = 0;
+			lft_base.move(powerL);
+			lfb_base.move(powerL);
+			lbt_base.move(powerL);
+			lbb_base.move(powerL);
+			rft_base.move(powerR);
+			rfb_base.move(powerR);
+			rbt_base.move(powerR);
+			rbb_base.move(powerR);
+			pros::delay(2);
+		}
 		prevErrorLeft = errorLeft;
 		prevErrorRight = errorRight;
 		pros::delay(2);
+		
 	}
 }
 
@@ -139,8 +146,8 @@ double prev_cata_error_l = 0;
 double prev_cata_error_r = 0;
 double cata_d_l = 0;
 double cata_d_r = 0;
-int correctingPow_l;
-int correctingPow_r;
+static int correctingPow_l;
+static int correctingPow_r;
 double currentPos_l;
 double currentPos_r;
 
@@ -161,7 +168,7 @@ void cata_pid(){
 		cata_d_l = cata_error_l - prev_cata_error_l;
 		cata_d_r = cata_error_r - prev_cata_error_r;
 		correctingPow_l = cata_error_l * cata_kp + cata_d_l * cata_kd;
-		correctingPow_r = cata_error_r * cata_kp + cata_d_r * cata_kd + 12;
+		correctingPow_r = cata_error_r * cata_kp + cata_d_r * cata_kd;
 		prev_cata_error_l = cata_error_l;
 		prev_cata_error_r = cata_error_r;
 		// printf("CorrectingPow: %i \n", correctingPow);
@@ -170,12 +177,12 @@ void cata_pid(){
 		printf("Position_r: %i \n", catarot_r.get_angle()/100);
 		// printf("CorrectingPow_l: %i \n", correctingPow_l);
 		if(shoot){
-			if ((catarot_l.get_angle() / 100) < 40 && (catarot_r.get_angle() / 100) < 40) {
-				lc.move(-55);
-				rc.move(-55);
-				pros::delay(2);
-			}
-			else {
+			// if ((catarot_l.get_angle() / 100) < 40 && (catarot_r.get_angle() / 100) < 40) {
+				lc.move(-50);
+				rc.move(-50);
+				pros::delay(100);
+			// }
+			// else {
 				lc.move(0);
 				rc.move(0);
 				shoot = false;
@@ -221,10 +228,7 @@ void cata_pid(){
 		// 	printf("catarot_r: %i \n", catarot_r.get_position()/100);
 		// }
     }
-}
-
-void cata_axle() {
-}
+// }
 
 void cata_l() {
 	pros::Motor lc(lc_motor, pros::E_MOTOR_GEARSET_18, false, pros::E_MOTOR_ENCODER_DEGREES);
@@ -253,6 +257,7 @@ void cata_r() {
 			else {
 				rc.move(0);
 			}
+			pros::delay(2);
 		}
 		pros::delay(2);
 	}
@@ -357,8 +362,8 @@ void autonomous() {
 	// pidvalues(targ_l, targ_r);
 	// master.print(2,0,"d",arrlen);
 
-	int a_l = 300;
-	int a_r = 300;
+	int a_l = 600;
+	int a_r = 600;
 	int b_l = 600;
 	int b_r = 600;
 	pidvalues(a_l, a_r);
