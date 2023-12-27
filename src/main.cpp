@@ -155,7 +155,7 @@ void cata_pid(){
     using namespace pros;
     pros::Motor lc(lc_motor, pros::E_MOTOR_GEARSET_18, false, pros::E_MOTOR_ENCODER_DEGREES);
 	pros::Motor rc(rc_motor, pros::E_MOTOR_GEARSET_18, true, pros::E_MOTOR_ENCODER_DEGREES);
-    pros::Rotation catarot_l(catarot_l_port);
+    pros::Rotation catarot_l(cata_arm_port);
 	pros::Rotation catarot_r(catarot_r_port);
     while(true){
 		pros::delay(2);
@@ -195,40 +195,39 @@ void cata_pid(){
 				// prev_cata_error_r = 0;
 				pros::delay(2);
 			}
-		}
 
 
 			// resetting of cata
-		// 	else if (cata_error_l > allowedError && currentPos_l > cata_target) {
-		// 		// check if left and right position is the same
-		// 		if (fabs(currentPos_l - currentPos_r) < Cata_lr_error) {
-		// 			lc.move(correctingPow);
-		// 			rc.move(correctingPow);
-		// 			// printf("CorrectingPow: %i \n", correctingPow);
-		// 		}
-		// 		else if (cata_error_l > cata_error_r) {
-		// 			lc.move(correctingPow);
-		// 			rc.move(0);
-		// 			// printf("right_cata_motor is slower \n");
-		// 		}
-		// 		else {
-		// 			lc.move(0);
-		// 			rc.move(correctingPow);
-		// 			// printf("left_cata_motor is slower \n");
-		// 		}
-		// 	}
-		// 	else {
-		// 		lc.move(0);
-		// 		rc.move(0);
-		// 		// printf("not moving \n");
-		// 	}
-		// }
+			else if (cata_error_l > allowedError && currentPos_l > cata_target) {
+				// check if left and right position is the same
+				if (fabs(currentPos_l - currentPos_r) < Cata_lr_error) {
+					lc.move(correctingPow_l);
+					rc.move(correctingPow_l);
+					// printf("CorrectingPow: %i \n", correctingPow);
+				}
+				// // else if (cata_error_l > cata_error_r) {
+				// // 	lc.move(correctingPow);
+				// // 	rc.move(0);
+				// // 	// printf("right_cata_motor is slower \n");
+				// // }
+				// else {
+				// 	lc.move(0);
+				// 	rc.move(correctingPow);
+				// 	// printf("left_cata_motor is slower \n");
+				// }
+			}
+			else {
+				lc.move(0);
+				rc.move(0);
+				// printf("not moving \n");
+			}
+		}
 		// else {
 		// 	printf("catarot_l: %i \n", catarot_l.get_position()/100);
 		// 	printf("catarot_r: %i \n", catarot_r.get_position()/100);
 		// }
     }
-// }
+
 
 void cata_l() {
 	pros::Motor lc(lc_motor, pros::E_MOTOR_GEARSET_18, false, pros::E_MOTOR_ENCODER_DEGREES);

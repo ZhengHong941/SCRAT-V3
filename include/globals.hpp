@@ -45,6 +45,7 @@
 #define rc_motor 19
 #define catarot_l_port 9 // 27.33
 #define catarot_r_port 20 // 7.99
+#define cata_arm_port 15 // 60
 
 //cata pid
 #define cata_kp 0.3
