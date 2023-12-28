@@ -138,128 +138,77 @@ void base_brake() {
 
 // }
 
-bool shoot = false;
-bool move_cata = true;
-double cata_error_l = 0;
-double cata_error_r = 0;
-double prev_cata_error_l = 0;
-double prev_cata_error_r = 0;
-double cata_d_l = 0;
-double cata_d_r = 0;
-static int correctingPow_l;
-static int correctingPow_r;
-double currentPos_l;
-double currentPos_r;
+bool CataIdle = true;
 
-void cata_pid(){
-    using namespace pros;
+void cata_control()
+{
+	using namespace pros;
     pros::Motor lc(lc_motor, pros::E_MOTOR_GEARSET_18, false, pros::E_MOTOR_ENCODER_DEGREES);
 	pros::Motor rc(rc_motor, pros::E_MOTOR_GEARSET_18, true, pros::E_MOTOR_ENCODER_DEGREES);
     pros::Rotation catarot_l(cata_arm_port);
 	pros::Rotation catarot_r(catarot_r_port);
-    while(true){
-		pros::delay(2);
-		if (not shoot) {std::cout << "shoot = false" << std::endl;}
-		// if ((loading_pos <= (catarot_l.get_angle() / 100) <= fire_pos) && (loading_pos <= (catarot_r.get_angle() / 100) <= fire_pos)) {
-		currentPos_l = catarot_l.get_angle() / 100;
-		currentPos_r = catarot_r.get_angle() / 100;
-		cata_error_l = currentPos_l - cata_target;
-		cata_error_r = currentPos_r - cata_target;
-		cata_d_l = cata_error_l - prev_cata_error_l;
-		cata_d_r = cata_error_r - prev_cata_error_r;
-		correctingPow_l = cata_error_l * cata_kp + cata_d_l * cata_kd;
-		correctingPow_r = cata_error_r * cata_kp + cata_d_r * cata_kd;
-		prev_cata_error_l = cata_error_l;
-		prev_cata_error_r = cata_error_r;
-		// printf("CorrectingPow: %i \n", correctingPow);
-		// printf("Error: %i \n", cata_error_l);
-		// printf("Position_l: %i \n", catarot_l.get_angle()/100);
-		printf("Position_r: %i \n", catarot_r.get_angle()/100);
-		// printf("CorrectingPow_l: %i \n", correctingPow_l);
-		if(shoot){
-			// if ((catarot_l.get_angle() / 100) < 40 && (catarot_r.get_angle() / 100) < 40) {
-				lc.move(-50);
-				rc.move(-50);
-				pros::delay(100);
-			// }
-			// else {
-				lc.move(0);
-				rc.move(0);
-				shoot = false;
-				pros::delay(Catadelay);
-				// cata_error_l = 0;
-				// cata_d_l = 0;
-				// prev_cata_error_l = 0;
-				// cata_error_r = 0;
-				// cata_d_r = 0;
-				// prev_cata_error_r = 0;
-				pros::delay(2);
-			}
+	int correctingPow_l;
+	int correctingPow_r;
 
+	printf("Cata FIring flag 2: %d \n", CataIdle);
 
-			// resetting of cata
-			else if (cata_error_l > allowedError && currentPos_l > cata_target) {
-				// check if left and right position is the same
-				if (fabs(currentPos_l - currentPos_r) < Cata_lr_error) {
-					lc.move(correctingPow_l);
-					rc.move(correctingPow_l);
-					// printf("CorrectingPow: %i \n", correctingPow);
+	
+	//the cata has a target angle for each slip gear, which it must reach. 
+	//If it undershoots, the catapult is too high and balls cannot load, and if it overshoots the catapult will fire.
+
+	while(true)
+	{
+		delay(1);
+		if(!CataIdle) //to fire the catapult
+		{
+			printf("Cata FIring flag 3: %d \n", CataIdle);
+ 
+			lc.move(-50);
+			rc.move(-50);
+			delay(100);
+			lc.brake();
+			rc.brake();
+			printf("Cata FIring flag 3: %d \n", CataIdle);
+			CataIdle = true; //we are done firing, so we update CataIdle to true
+		}
+		else //if cata is idle, ie not firing, then we have an opportunity to rewind
+		{
+			printf("PosL: %i \n", catarot_l.get_angle() / 100);
+			printf("PosR: %i \n", catarot_r.get_angle() / 100);
+
+			if(catarot_l.get_angle() / 100 < cata_target || catarot_r.get_angle() / 100 < cata_target) //if we need to rewind
+			{
+				printf("Cata rewinding flag 4: %d \n", CataIdle);
+
+				bool CataRewinding = true;
+				while(CataRewinding)//to rewind the catapult
+				{
+
+					//if either motor has not reached its target, move towards the target
+					//if either motor is already at the target, then brake immediately to prevent overshooting.
+					if(catarot_l.get_angle() / 100 < cata_target)
+						lc.move((catarot_l.get_angle() / 100 - cata_target) * cata_kp);
+					else
+						lc.brake();
+					if(catarot_r.get_angle() / 100 < cata_target)
+						rc.move((catarot_r.get_angle() / 100 - cata_target) * cata_kp);
+					else
+						rc.brake();
+
+					if(catarot_l.get_angle() / 100 >= cata_target && catarot_r.get_angle() / 100 >= cata_target) //if both motors reached the target, we have finished rewinding
+					{
+						CataRewinding = false;
+						CataIdle = true;
+					}
 				}
-				// // else if (cata_error_l > cata_error_r) {
-				// // 	lc.move(correctingPow);
-				// // 	rc.move(0);
-				// // 	// printf("right_cata_motor is slower \n");
-				// // }
-				// else {
-				// 	lc.move(0);
-				// 	rc.move(correctingPow);
-				// 	// printf("left_cata_motor is slower \n");
-				// }
 			}
-			else {
-				lc.move(0);
-				rc.move(0);
-				// printf("not moving \n");
-			}
+			
+			
 		}
-		// else {
-		// 	printf("catarot_l: %i \n", catarot_l.get_position()/100);
-		// 	printf("catarot_r: %i \n", catarot_r.get_position()/100);
-		// }
-    }
 
 
-void cata_l() {
-	pros::Motor lc(lc_motor, pros::E_MOTOR_GEARSET_18, false, pros::E_MOTOR_ENCODER_DEGREES);
-	while (true) {
-		if ((not shoot) && move_cata){
-			if (cata_error_l > allowedError) {
-				lc.move(-correctingPow_l);
-				printf("correctingPow_l: %i \n", correctingPow_l);
-			}
-			else {
-				lc.move(0);
-			}
-			pros::delay(2);
-		}
-		pros::delay(2);
 	}
-}
-void cata_r() {
-	pros::Motor rc(rc_motor, pros::E_MOTOR_GEARSET_18, true, pros::E_MOTOR_ENCODER_DEGREES);
-	while (true) {
-		if ((not shoot) && move_cata) {
-			if (cata_error_r > allowedError) {
-				rc.move(-correctingPow_r);
-				printf("correctingPow_r: %i \n", correctingPow_r);
-			}
-			else {
-				rc.move(0);
-			}
-			pros::delay(2);
-		}
-		pros::delay(2);
-	}
+	
 }
 
 // bool IntakeTargetPosUp = true;
@@ -333,9 +282,7 @@ void initialize() {
 	//front rollers
     pros::Motor front_roller(front_roller_motor, pros::E_MOTOR_GEARSET_18, true, pros::E_MOTOR_ENCODER_DEGREES);
 
-	pros::Task cata(cata_pid);
-	pros::Task cataR(cata_r);
-	pros::Task cataL(cata_l);
+	pros::Task cata(cata_control);
 	
 	pros::Task flipper(flipper_pid);
 }
@@ -422,8 +369,9 @@ void opcontrol() {
         rbb_base.move(right);
 		rbt_base.move(right);
 
-		if(master.get_digital(DIGITAL_R1)){
-			shoot = true;
+		if(master.get_digital(DIGITAL_R1) && CataIdle){
+			CataIdle = false;
+			printf("Cata FIring flag 1: %d \n", CataIdle);
         }
 
 		//flipper control
