@@ -5,25 +5,15 @@
 #include "pros/motors.h"
 #include "globals.hpp"
 
-double prevErrorLeft = 0;
-double prevErrorRight = 0;
-double encdleft = 0;
-double encdright = 0;
-double errorLeft = 0;
-double errorRight = 0;
+
 double LEFTTARGET = 0;
 double RIGHTTARGET = 0;
-double deltaErrorLeft = 0;
-double deltaErrorRight = 0;
-double powerL = 0;
-double powerR = 0;
+
 double auton_pos[2] = {0,0};
 int i = 0;
 bool brake = false;
-bool next_movement = true;
+// bool next_movement = false;
 int arrlen = 0;
-
-bool IntakeTargetPosUp = true;
 
 // void pidvalues(double* targleft, double* targright){
 // 	while (i < arrlen) {
@@ -63,6 +53,18 @@ void pidmove() {
 	trackingwheel_r.set_reversed(true);
 	trackingwheel_l.set_position(0);
 	trackingwheel_r.set_position(0);
+
+	double powerL = 0;
+	double powerR = 0;
+	double deltaErrorLeft = 0;
+	double deltaErrorRight = 0;
+	double encdleft = 0;
+	double encdright = 0;
+	double errorLeft = 0;
+	double errorRight = 0;
+	double prevErrorLeft = 0;
+	double prevErrorRight = 0;
+
 	while(true){
 		// std::cout << "0" << std::endl;
 		// pros::delay(20);
@@ -138,12 +140,6 @@ void base_brake() {
 // void turn() {
 
 // }
-
-bool CataIdle = true;
-bool mesh = false;
-
-int correctingPow_l;
-int correctingPow_r;
 
 bool shoot = false;
 
@@ -231,21 +227,18 @@ void cata_control_new() {
 					// lc.move(10);
 					std::cout << "1" << std::endl;
 					pros::delay(2);
-					
 				}
 				else {
 					step_l = false;
 					lc.move(-80);
 					std::cout << "2" << std::endl;
 					pros::delay(2);
-					
 				}
 				if (rewind_target <= posR) {
 					step_r = true;
 					// rc.move(10);
 					std::cout << "3" << std::endl;
 					pros::delay(2);
-					
 				}
 				else {
 					step_r = false;
@@ -266,7 +259,6 @@ void cata_control_new() {
 					rc.move(25);
 					pros::delay(2);
 				}
-
 				if (rewind_target >= firing_angle) {
 					lc.move(10);
 					rc.move(10);
@@ -295,14 +287,8 @@ void cata_control_new() {
 }
 
 
-// bool IntakeTargetPosUp = true;
+bool IntakeTargetPosUp = true;
 int RollerPow = 0;
-bool Roller_Intake;
-float flipper_error;
-float prev_flipper_error;
-float flipper_d;
-float total_flipper_error;
-double flipper_pow;
 
 void flipper_pid() {
     using namespace pros;
@@ -310,6 +296,12 @@ void flipper_pid() {
     pros::Motor f_roller(flipper_roller_motor);
     pros::Rotation flipperrot(flipperrot_port);
     
+	float flipper_error;
+	float prev_flipper_error;
+	float flipper_d;
+	float total_flipper_error;
+	double flipper_pow;
+
     // IntakeTargetPosUp = true; //move to up position    
     // IntakeTargetPosUp = false; //move to down position
 
@@ -372,7 +364,7 @@ void initialize() {
 	//front rollers
     pros::Motor front_roller(front_roller_motor, pros::E_MOTOR_GEARSET_18, true, pros::E_MOTOR_ENCODER_DEGREES);
 
-	pros::Task cata(cata_control_new);
+	// pros::Task cata(cata_control_new);
 	pros::Task flipper(flipper_pid);
 }
 
@@ -463,7 +455,7 @@ void opcontrol() {
 		// 	printf("Cata FIring flag 1: %d \n", CataIdle);
         // }
 
-		if(master.get_digital(DIGITAL_R1) && CataIdle){
+		if(master.get_digital(DIGITAL_R1)){
 			shoot = true;
         }
 
