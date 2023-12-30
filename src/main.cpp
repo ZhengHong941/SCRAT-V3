@@ -3,6 +3,7 @@
 #include "pros/adi.hpp"
 #include "pros/misc.h"
 #include "pros/motors.h"
+#include "globals.hpp"
 
 double prevErrorLeft = 0;
 double prevErrorRight = 0;
@@ -43,8 +44,8 @@ bool IntakeTargetPosUp = true;
 void pidvalues(double targleft, double targright){
 	LEFTTARGET = targleft;
 	RIGHTTARGET = targright;
-	errorLeft = targleft;
-	errorRight = targright;
+	// errorLeft = targleft;
+	// errorRight = targright;
 }
 
 void pidmove() {
@@ -139,16 +140,133 @@ void base_brake() {
 // }
 
 bool CataIdle = true;
+bool mesh = false;
 
-void cata_control()
-{
-	using namespace pros;
-    pros::Motor lc(lc_motor, pros::E_MOTOR_GEARSET_18, false, pros::E_MOTOR_ENCODER_DEGREES);
-	pros::Motor rc(rc_motor, pros::E_MOTOR_GEARSET_18, true, pros::E_MOTOR_ENCODER_DEGREES);
-    pros::Rotation catarot_l(cata_arm_port);
+int correctingPow_l;
+int correctingPow_r;
+
+bool shoot = false;
+
+void cata_control_new() {
+	pros::Motor lc(lc_motor, pros::E_MOTOR_GEARSET_36, false, pros::E_MOTOR_ENCODER_DEGREES);
+	pros::Motor rc(rc_motor, pros::E_MOTOR_GEARSET_36, true, pros::E_MOTOR_ENCODER_DEGREES);
+    pros::Rotation catarot_l(catarot_l_port);
 	pros::Rotation catarot_r(catarot_r_port);
-	int correctingPow_l;
-	int correctingPow_r;
+	pros::Rotation cata_arm(cata_arm_port);
+
+	int cata_state = 0;
+	double posL;
+	double posR;
+	double firing_angle = 160;
+	double mesh_angle = 359;
+	double rewind_target;
+	bool step_l;
+	bool step_r;
+	while (true) {
+		posL = catarot_l.get_angle() / 100;
+		posR = catarot_r.get_angle() / 100;
+		step_l = false;
+		step_r = false;
+
+		// state 0 - check angles. if beyond firing angle, proceed to state 1.
+		// state 1 - mesh gears. meshing should be around 358 to 5 degrees. after meshing, proceed to state 2.
+		// state 2 - wind cata to loading position. loading position is about 145 to 150 degrees.
+		// state 3 - ready to fire. if shoot is true, fire and set state to 0.
+
+		switch(cata_state) {
+			case 0:
+				if (posL > firing_angle && posR > firing_angle) {
+					lc.brake();
+					rc.brake();
+					pros::delay(2);
+					cata_state = 1;
+				}
+				else {
+					std::cout << "cata jammed" << std::endl;
+					std::cout << posL << posR << std::endl;
+				}
+				break;
+			case 1:
+				if (posL < mesh_angle) {
+					lc.move(-20);
+					pros::delay(2);
+				}
+				else {
+					lc.brake();
+					pros::delay(2);
+				}
+				if (posR < mesh_angle) {
+					rc.move(-20);
+					pros::delay(2);
+				}
+				else {
+					rc.brake();
+					pros::delay(2);
+				}
+				if ( ((posL >= mesh_angle) || (0 < posL < rewind_target)) && ((posR > mesh_angle) || (0 < posR < rewind_target)) ) {
+					cata_state = 2;
+					rewind_target = 5;
+				}
+				break;
+			case 2:
+				if (posL < rewind_target) {
+					step_l = false;
+					lc.move(-20);
+					pros::delay(2);
+				}
+				else {
+					step_l = true;
+					lc.brake();
+					pros::delay(2);
+				}
+				if (posR < rewind_target) {
+					step_r = false;
+					rc.move(-20);
+					pros::delay(2);
+				}
+				else {
+					step_r = true;
+					rc.brake();
+					pros::delay(2);
+				}
+				if (step_l && step_r) {
+					rewind_target += 5;
+				}
+				if (rewind_target >= cata_target) {
+					lc.brake();
+					rc.brake();
+					pros::delay(2);
+					cata_state = 3;
+				}
+				break;
+			case 3:
+				if (shoot) {
+					lc.move(-50);
+					rc.move(-50);
+					pros::delay(100);
+					lc.brake();
+					rc.brake();
+					cata_state = 0;
+				}
+				else {
+					lc.brake();
+					rc.brake();
+					pros::delay(2);
+				}
+				break;
+		}
+	}
+}
+
+
+
+void cata_control() {
+	using namespace pros;
+    pros::Motor lc(lc_motor, pros::E_MOTOR_GEARSET_36, false, pros::E_MOTOR_ENCODER_DEGREES);
+	pros::Motor rc(rc_motor, pros::E_MOTOR_GEARSET_36, true, pros::E_MOTOR_ENCODER_DEGREES);
+    pros::Rotation catarot_l(catarot_l_port);
+	pros::Rotation catarot_r(catarot_r_port);
+	pros::Rotation cata_arm(cata_arm_port);
 
 	printf("Cata FIring flag 2: %d \n", CataIdle);
 
@@ -176,39 +294,124 @@ void cata_control()
 			printf("PosL: %i \n", catarot_l.get_angle() / 100);
 			printf("PosR: %i \n", catarot_r.get_angle() / 100);
 
-			if(catarot_l.get_angle() / 100 < cata_target || catarot_r.get_angle() / 100 < cata_target) //if we need to rewind
+			if(catarot_l.get_angle() / 100 > cata_target || catarot_r.get_angle() / 100 > cata_target) //if we need to rewind
 			{
-				printf("Cata rewinding flag 4: %d \n", CataIdle);
+				printf("Cata rewinding flag 74: %d \n", CataIdle);
 
 				bool CataRewinding = true;
+				int rewind_target = 355; // position where both gears are almost meshing
 				while(CataRewinding)//to rewind the catapult
 				{
 
+											printf("Cata rewinding target value: %d \n", rewind_target);
+											printf("Cata rewinding left  value: %d \n", catarot_l.get_angle() / 100);
+
+											printf("Cata rewinding right value: %d \n", catarot_r.get_angle() / 100);
+
+
+					// std::cout << rewind_target << std::endl;
+					if (catarot_l.get_angle() / 100 >= rewind_target) {
+
+											printf("Cata rewinding left: %d \n", CataIdle);
+
+						// lc.move(((catarot_l.get_angle() / 100 - rewind_target) * cata_kp));
+						// lc.move(-40);
+						// pros::delay(2);
+						// std::cout << "move_l" << std::endl;
+						lc.brake();
+					}
+					else {
+											printf("Cata not rewinding left: %d \n", CataIdle);
+						lc.move(-40);
+						pros::delay(2);
+						// lc.brake();
+					}
+
+					if (catarot_r.get_angle() / 100 >= rewind_target) {
+											printf("Cata rewinding right: %d \n", CataIdle);
+
+						// rc.move(((catarot_r.get_angle() / 100 - rewind_target) * cata_kp));
+						// rc.move(-40);
+						// pros::delay(2);
+						// std::cout << "move_r" << std::endl;
+						rc.brake();
+					}
+					else {
+											printf("Cata not rewinding right: %d \n", CataIdle);
+						rc.move(-40);
+						pros::delay(2);
+						// rc.brake();
+					}
+
+					printf("Cata rewinding flag 76: %d \n", CataIdle);
+
+					pros::delay(2);
+					if ( (catarot_l.get_angle() / 100) >= rewind_target && (catarot_r.get_angle() / 100) >= rewind_target ){
+						mesh = true;
+						// std::cout << mesh << std::endl;
+						rewind_target = 5;
+						while (mesh) {
+							std::cout << rewind_target  << std::endl; //+ "   rewind_target"
+							if (rewind_target < catarot_l.get_angle() / 100) {
+								lc.move(((catarot_l.get_angle() / 100 - 360 - rewind_target) * cata_kp));
+								pros::delay(2);
+								// std::cout << ((catarot_l.get_angle() / 100 - 360 - rewind_target) * cata_kp) << std::endl;
+							}
+							else {
+								lc.brake();
+								pros::delay(2);
+							}
+
+							if (rewind_target < catarot_r.get_angle() / 100) {
+								rc.move(((catarot_r.get_angle() / 100 - 360 - rewind_target) * cata_kp));
+								pros::delay(2);
+								// std::cout << ((catarot_r.get_angle() / 100 - 360 - rewind_target) * cata_kp) << std::endl;
+							}
+							else {
+								rc.brake();
+								pros::delay(2);
+							}
+							
+							if (rewind_target >= cata_target) {
+								lc.brake();
+								rc.brake();
+								CataRewinding = false;
+								CataIdle = true;
+								mesh = false;
+								pros::delay(2);
+							}
+
+							else if ( (catarot_l.get_angle() / 100) >= (rewind_target - 5) && (catarot_r.get_angle() / 100) >= (rewind_target - 5) ) {
+								rewind_target += 3;
+								pros::delay(2);
+							}
+						}
+					}
+					else{
+											printf("not fucking meshing: %d \n", CataIdle);
+
+					}
+				} 
 					//if either motor has not reached its target, move towards the target
 					//if either motor is already at the target, then brake immediately to prevent overshooting.
-					if(catarot_l.get_angle() / 100 < cata_target)
-						lc.move((catarot_l.get_angle() / 100 - cata_target) * cata_kp);
-					else
-						lc.brake();
-					if(catarot_r.get_angle() / 100 < cata_target)
-						rc.move((catarot_r.get_angle() / 100 - cata_target) * cata_kp);
-					else
-						rc.brake();
+					
+					// if(catarot_l.get_angle() / 100 < cata_target)
+					// 	lc.move((catarot_l.get_angle() / 100 - cata_target) * cata_kp);
+					// else
+					// 	lc.brake();
 
-					if(catarot_l.get_angle() / 100 >= cata_target && catarot_r.get_angle() / 100 >= cata_target) //if both motors reached the target, we have finished rewinding
-					{
-						CataRewinding = false;
-						CataIdle = true;
-					}
-				}
+					// if(catarot_r.get_angle() / 100 < cata_target)
+					// 	rc.move((catarot_r.get_angle() / 100 - cata_target) * cata_kp);
+					// else
+					// 	rc.brake();
+
+					// if(catarot_l.get_angle() / 100 >= cata_target && catarot_r.get_angle() / 100 >= cata_target) //if both motors reached the target, we have finished rewinding
+					// {
+					// 	CataRewinding = false;
+					// 	CataIdle = true;
 			}
-			
-			
 		}
-
-
 	}
-	
 }
 
 // bool IntakeTargetPosUp = true;
@@ -274,6 +477,12 @@ void initialize() {
 	trackingwheel_r.set_position(0);
 	trackingwheel_r.set_reversed(true);
 
+	//cata
+	pros::Motor lc(lc_motor, pros::E_MOTOR_GEARSET_36, true, pros::E_MOTOR_ENCODER_DEGREES);
+	pros::Motor rc(rc_motor, pros::E_MOTOR_GEARSET_36, false, pros::E_MOTOR_ENCODER_DEGREES);
+    pros::Rotation catarot_l(catarot_l_port);
+	pros::Rotation catarot_r(catarot_r_port);
+
 	//flipper
     pros::Motor f_arm(flipper_motor, pros::E_MOTOR_GEARSET_18, false, pros::E_MOTOR_ENCODER_DEGREES);
 	pros::Motor f_roller(flipper_roller_motor, pros::E_MOTOR_GEARSET_06, true, pros::E_MOTOR_ENCODER_DEGREES);
@@ -282,8 +491,7 @@ void initialize() {
 	//front rollers
     pros::Motor front_roller(front_roller_motor, pros::E_MOTOR_GEARSET_18, true, pros::E_MOTOR_ENCODER_DEGREES);
 
-	pros::Task cata(cata_control);
-	
+	pros::Task cata(cata_control_new);
 	pros::Task flipper(flipper_pid);
 }
 
@@ -369,9 +577,13 @@ void opcontrol() {
         rbb_base.move(right);
 		rbt_base.move(right);
 
+		// if(master.get_digital(DIGITAL_R1) && CataIdle){
+		// 	CataIdle = false;
+		// 	printf("Cata FIring flag 1: %d \n", CataIdle);
+        // }
+
 		if(master.get_digital(DIGITAL_R1) && CataIdle){
-			CataIdle = false;
-			printf("Cata FIring flag 1: %d \n", CataIdle);
+			shoot = true;
         }
 
 		//flipper control

@@ -48,12 +48,12 @@
 #define cata_arm_port 15 // 60
 
 //cata pid
-#define cata_kp 0.3
+#define cata_kp 1
 #define cata_kd 0
 #define Catadelay 3000
 #define Cata_lr_error 2
 #define allowedError 2
-#define cata_target 0
+#define cata_target 120
 #define cata_power 1
 
 #define loading_pos 0
@@ -62,7 +62,5 @@
 
 //port 20 clip on brain broken
 // down = 100
-
-
 
 #endif
