@@ -53,7 +53,7 @@
 #define Catadelay 3000
 #define Cata_lr_error 2
 #define allowedError 2
-#define cata_target 120
+// #define cata_target 130
 #define cata_power 1
 
 #define loading_pos 0
