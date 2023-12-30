@@ -5,41 +5,21 @@
 #include "pros/motors.h"
 #include "globals.hpp"
 
+double powerL;
+double powerR;
+double deltaErrorLeft;
+double deltaErrorRight;
+double encdleft;
+double encdright;
+double errorLeft;
+double errorRight;
+double prevErrorLeft;
+double prevErrorRight;
 
-double LEFTTARGET = 0;
-double RIGHTTARGET = 0;
+bool l_move;
+bool r_move;
 
-double auton_pos[2] = {0,0};
-int i = 0;
-bool brake = false;
-// bool next_movement = false;
-int arrlen = 0;
-
-// void pidvalues(double* targleft, double* targright){
-// 	while (i < arrlen) {
-// 		if(next_movement){
-// 			auton_pos[0] = auton_pos[0] + targleft[i];
-// 			auton_pos[1] = auton_pos[1] + targright[i];
-// 			LEFTTARGET = auton_pos[0];
-// 			errorLeft = auton_pos[0];
-// 			RIGHTTARGET = auton_pos[1];
-// 			errorRight = auton_pos[1];
-// 			pros::delay(2);
-// 			i++;
-// 			next_movement = false;
-// 			pros::delay(2);
-// 		}
-// 	}
-// }
-void pidvalues(double targleft, double targright){
-	LEFTTARGET = targleft;
-	RIGHTTARGET = targright;
-	// errorLeft = targleft;
-	// errorRight = targright;
-}
-
-void pidmove() {
-    // using namespace pros;
+void moveforward_pid(double TARGET) {
 	pros::Motor lfb_base(lfb_port, pros::E_MOTOR_GEARSET_06, true, pros::E_MOTOR_ENCODER_DEGREES);
 	pros::Motor lft_base(lft_port, pros::E_MOTOR_GEARSET_06, true, pros::E_MOTOR_ENCODER_DEGREES);
 	pros::Motor lbb_base(lbb_port, pros::E_MOTOR_GEARSET_06, true, pros::E_MOTOR_ENCODER_DEGREES);
@@ -54,50 +34,57 @@ void pidmove() {
 	trackingwheel_l.set_position(0);
 	trackingwheel_r.set_position(0);
 
-	double powerL = 0;
-	double powerR = 0;
-	double deltaErrorLeft = 0;
-	double deltaErrorRight = 0;
-	double encdleft = 0;
-	double encdright = 0;
-	double errorLeft = 0;
-	double errorRight = 0;
-	double prevErrorLeft = 0;
-	double prevErrorRight = 0;
+	powerL = 0;
+	powerR = 0;
+	deltaErrorLeft = 0;
+	deltaErrorRight = 0;
+	encdleft = 0;
+	encdright = 0;
+	errorLeft = 0;
+	errorRight = 0;
+	prevErrorLeft = 0;
+	prevErrorRight = 0;
 
-	while(true){
-		// std::cout << "0" << std::endl;
-		// pros::delay(20);
+	l_move = true;
+	r_move = true;	
+
+	while(l_move || r_move){
 		encdleft = trackingwheel_l.get_position() * pi * 28 / 36000;
 		encdright = trackingwheel_r.get_position() * pi * 28 / 36000;
-		errorLeft = LEFTTARGET - encdleft;
-		errorRight = RIGHTTARGET - encdright;
+		errorLeft = TARGET - encdleft;
+		errorRight = TARGET - encdright;
 		deltaErrorLeft = errorLeft - prevErrorLeft;
 		deltaErrorRight = errorRight - prevErrorRight;
 		powerL = base_kp * errorLeft + base_ki * prevErrorLeft + base_kd * deltaErrorLeft; // divide 25 to prevent from going insane - kp must not be too high - when ki=0.1 kd=0,  
 		powerR = base_kp * errorRight + base_ki * prevErrorRight + base_kd * deltaErrorRight;
 		printf("encdleft: %f \n", encdleft);
 		printf("encdright: %f \n", encdright);
-		if (fabs(errorLeft) >= base_error ){
-			lft_base.move(powerL);
-			lfb_base.move(powerL);
-			lbt_base.move(powerL);
-			lbb_base.move(powerL);
-			rft_base.move(powerR);
-			rfb_base.move(powerR);
-			rbt_base.move(powerR);
-			rbb_base.move(powerR);
-			printf("powerL: %f \n", powerL);
-			printf("powerR: %f \n", powerR);
+		printf("powerL: %f \n", powerL);
+		printf("powerR: %f \n", powerR);
+		if (errorLeft == 0){
+			lft_base.brake();
+			lfb_base.brake();
+			lbt_base.brake();
+			lbb_base.brake();
+			l_move = false;
 			pros::delay(2);
 		}
 		else {
-			powerL = 0;
-			powerR = 0;
 			lft_base.move(powerL);
 			lfb_base.move(powerL);
 			lbt_base.move(powerL);
 			lbb_base.move(powerL);
+			pros::delay(2);
+		}
+		if (errorRight == 0) {
+			rft_base.brake();
+			rfb_base.brake();
+			rbt_base.brake();
+			rbb_base.brake();
+			r_move = false;
+			pros::delay(2);
+		}
+		else {
 			rft_base.move(powerR);
 			rfb_base.move(powerR);
 			rbt_base.move(powerR);
@@ -107,11 +94,11 @@ void pidmove() {
 		prevErrorLeft = errorLeft;
 		prevErrorRight = errorRight;
 		pros::delay(2);
-		
 	}
 }
 
-
+bool brake = false;
+// base_brake not to be used with movement functions.
 void base_brake() {
 	while(true){
 		while(brake){
@@ -153,8 +140,8 @@ void cata_control_new() {
 	int cata_state = 0;
 	double posL;
 	double posR;
-	double firing_angle = 138;
-	double mesh_angle = 355;
+	double firing_angle = 135;
+	double mesh_angle = 359;
 	double rewind_target;
 	bool step_l;
 	bool step_r;
@@ -185,7 +172,7 @@ void cata_control_new() {
 			case 1:
 				// std::cout << "mesh" << std::endl;
 				if (firing_angle < posL && posL < mesh_angle) {
-					lc.move(-37);
+					lc.move(-45);
 					pros::delay(2);
 					std::cout << posL << std::endl;
 				}
@@ -230,7 +217,7 @@ void cata_control_new() {
 				}
 				else {
 					step_l = false;
-					lc.move(-80);
+					lc.move(-60);
 					std::cout << "2" << std::endl;
 					pros::delay(2);
 				}
@@ -242,7 +229,7 @@ void cata_control_new() {
 				}
 				else {
 					step_r = false;
-					rc.move(-80);
+					rc.move(-60);
 					std::cout << "4" << std::endl;
 					pros::delay(2);
 				}
@@ -267,7 +254,7 @@ void cata_control_new() {
 				}
 				break;
 			case 3:
-				std::cout << "ready" << std::endl;
+				// std::cout << "ready" << std::endl;
 				if (shoot) {
 					lc.move(-50);
 					rc.move(-50);
@@ -379,23 +366,11 @@ void autonomous() {
 	//clear controller screen
 	// master.clear();
 	// pros::delay(50);
-	pros::Task base_pid(pidmove);
 	pros::delay(2);
 
-	// double targ_l[] = {600, 600};
-	// double targ_r[] = {600, 600};
-	// arrlen = sizeof(targ_l) / sizeof(targ_l[0]);
-	// pros::delay(2);
-	// pidvalues(targ_l, targ_r);
-	// master.print(2,0,"d",arrlen);
-
-	int a_l = 600;
-	int a_r = 600;
-	int b_l = 600;
-	int b_r = 600;
-	pidvalues(a_l, a_r);
-	// pidvalues(a_l+b_l, a_r+b_r);
-	// pros::delay(400);
+	moveforward_pid(600.0);
+	// moveforward_pid(300.0);
+	
 }
 
 

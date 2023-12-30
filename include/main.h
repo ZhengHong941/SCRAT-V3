@@ -63,11 +63,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-void pidmove();
-void pidvalues();
-void base_brake();
-
 void autonomous(void);
 void initialize(void);
 void disabled(void);

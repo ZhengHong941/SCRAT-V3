@@ -17,14 +17,19 @@
 //value of pi
 #define pi 3.14159265358979
 
-//omniwheel diameter in mm
-#define tw_diameter 28.0
+//omniwheel diameter is about 28 mm
+// distance between omniwheel is about 235 mm
 
-//base pid
-#define base_kp 0.5
-#define base_ki 0.1
-#define base_kd 5
-#define base_error 1
+//base pid - forward / backward
+#define base_kp 0.8 // 0.6
+#define base_ki 0.1 // 0.1
+#define base_kd 5 // 5
+// #define base_error 1
+
+//base pid - turning
+#define turn_kp 0.5
+#define turn_ki 0.1
+#define turn_kd 5
 
 //flipper
 #define flipper_motor 11
