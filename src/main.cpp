@@ -23,6 +23,9 @@ bool r_move;
 
 int l;
 int r;
+int encodercheckl = 0;
+int encodercheckr = 0;
+
 
 void forward_pid(double TARGET_L, double TARGET_R) {
 	pros::Motor lfb_base(lfb_port, pros::E_MOTOR_GEARSET_06, true, pros::E_MOTOR_ENCODER_DEGREES);
@@ -72,7 +75,22 @@ void forward_pid(double TARGET_L, double TARGET_R) {
 		powerR = base_kp * errorRight + base_ki * totalErrorRight + base_kd * deltaErrorRight;
 		printf("encdleft: %f \n", encdleft);
 		printf("encdright: %f \n", encdright);
-		
+
+		if((prevErrorLeft == errorLeft) && (errorLeft < 0.2*TARGET_L)){
+			encodercheckl++;
+		}
+		if(encodercheckl==50){
+			l_move = false;
+			encodercheckl = 0;
+		}
+
+		if((prevErrorRight == errorRight) && (errorRight < 0.2*TARGET_R) ){
+			encodercheckr++;
+		}
+		if(encodercheckr==50){
+			r_move = false;
+			encodercheckr = 0;
+		}
 		
 		
 		if ( (fabs(errorLeft) >= base_error) && l_move){
@@ -111,7 +129,7 @@ void forward_pid(double TARGET_L, double TARGET_R) {
 		}
 		prevErrorLeft = errorLeft;
 		prevErrorRight = errorRight;
-		// pros::delay(2);
+		pros::delay(2);
 	}
 }
 
