@@ -36,6 +36,7 @@
 
 #include "api.h"
 #include "globals.hpp"
+#include "odometry.hpp"
 
 /**
  * You should add more #includes here

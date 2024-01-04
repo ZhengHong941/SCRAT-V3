@@ -14,6 +14,8 @@
 #define twl_port 4
 #define twr_port 1
 
+#define imu_port 3
+
 //value of pi
 #define pi 3.14159265358979
 
@@ -25,9 +27,9 @@
 #define base_error 2
 
 //base pid - forward / backward
-#define base_kp 0.76 // 0.8
-#define base_ki 0.003 // 
-#define base_kd 6 // 5
+#define base_kp 1 // 0.8, 0.76
+#define base_ki 0 // 0.003
+#define base_kd 0 // 5, 6
 
 //base pid - turning
 #define turn_kp 1.2
@@ -56,7 +58,8 @@
 #define cata_arm_port 15 // 60
 
 //cata pid
-#define cata_kp 1
+#define cata_kp 5
+#define cata_ki 0.009 //0.009
 #define cata_kd 0
 #define Catadelay 3000
 #define Cata_lr_error 2
