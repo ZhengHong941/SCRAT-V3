@@ -59,7 +59,7 @@
 
 //cata pid
 #define cata_kp 5
-#define cata_ki 0.009 //0.009
+#define cata_ki 0 //0.009
 #define cata_kd 0
 #define Catadelay 3000
 #define Cata_lr_error 2

@@ -449,7 +449,7 @@ void cata_control_new() {
 				}
 				else {
 					step_l = false;
-					lc.move(-85 - (cata_ki * total_error_l));
+					lc.move(-85 - (cata_kp * fabs(errorL)) - (cata_ki * total_error_l));
 					std::cout << "2" << std::endl;
 					// pros::delay(2);
 				}
@@ -461,7 +461,7 @@ void cata_control_new() {
 				}
 				else {
 					step_r = false;
-					rc.move(-85 - (cata_ki * total_error_r));
+					rc.move(-127 - (cata_kp * fabs(errorR)) -(cata_ki * total_error_r));
 					std::cout << "4" << std::endl;
 					// pros::delay(2);
 				}
@@ -484,8 +484,8 @@ void cata_control_new() {
 					// pros::delay(2);
 					cata_state = 3;
 				}
-				std::cout << "powerL " << -85 - (cata_ki * total_error_l) << std::endl;
-				std::cout << "powerR " << -85 - (cata_ki * total_error_r) << std::endl;
+				std::cout << "powerL " << -85 - (cata_kp * fabs(errorL)) - (cata_ki * total_error_l) << std::endl;
+				std::cout << "powerR " << -127 - (cata_kp * fabs(errorR)) -(cata_ki * total_error_r) << std::endl;
 
 				std::cout << "total_error_l " << total_error_l << std::endl;
 				std::cout << "total_error_r " << total_error_r << std::endl;
@@ -493,8 +493,8 @@ void cata_control_new() {
 			case 3:
 				// std::cout << "ready" << std::endl;
 				if (shoot) {
-					lc.move(-110);
-					rc.move(-100);
+					lc.move(-127);
+					// rc.move(-100);
 					pros::delay(200);
 					lc.move(10);
 					rc.move(10);
