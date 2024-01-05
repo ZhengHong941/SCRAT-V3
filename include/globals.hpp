@@ -27,10 +27,9 @@
 #define base_error 2
 
 //base pid - forward / backward
-#define base_kp_l 0.5     // 0.8, 0.76
-#define base_kp_r 0.5
-#define base_ki 0 //.0005 // 0.003
-#define base_kd 10 // 5, 6
+#define base_kp 1 // 0.8, 0.76
+#define base_ki 0 // 0.003
+#define base_kd 0 // 5, 6
 
 //base pid - turning
 #define turn_kp 1.2
@@ -56,11 +55,10 @@
 #define rc_motor 19
 #define catarot_l_port 9 // 27.33
 #define catarot_r_port 20 // 7.99
-#define cata_arm_port 15 // 60
 
 //cata pid
-#define cata_kp 5
-#define cata_ki 0.009 //0.009
+#define cata_kp 12
+#define cata_ki 0 //0.009
 #define cata_kd 0
 #define Catadelay 3000
 #define Cata_lr_error 2
