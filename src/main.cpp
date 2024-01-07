@@ -7,6 +7,8 @@
 
 double powerL;
 double powerR;
+double targPowerL;
+double targPowerR;
 double deltaErrorLeft;
 double deltaErrorRight;
 double encdleft;
@@ -23,6 +25,12 @@ double RIGHTTARGET;
 bool l_move;
 bool r_move;
 
+double imu_heading;
+
+// double start_timestamp;
+// double current_time;
+// double acceleration;
+
 void forward_pid(double TARGET_L, double TARGET_R) {
 	pros::Motor lfb_base(lfb_port, pros::E_MOTOR_GEARSET_06, true, pros::E_MOTOR_ENCODER_DEGREES);
 	pros::Motor lft_base(lft_port, pros::E_MOTOR_GEARSET_06, true, pros::E_MOTOR_ENCODER_DEGREES);
@@ -37,9 +45,13 @@ void forward_pid(double TARGET_L, double TARGET_R) {
 	trackingwheel_r.set_reversed(true);
 	trackingwheel_l.set_position(0);
 	trackingwheel_r.set_position(0);
+	pros::Imu imu_sensor(imu_port);
+	imu_sensor.set_heading(90);
 
 	powerL = 0;
 	powerR = 0;
+	targPowerL = 0;
+	targPowerR = 0;
 	deltaErrorLeft = 0;
 	deltaErrorRight = 0;
 	encdleft = 0;
@@ -54,6 +66,11 @@ void forward_pid(double TARGET_L, double TARGET_R) {
 	l_move = true;
 	r_move = true;
 
+	imu_heading = 0;
+
+	// start_timestamp = pros::millis();
+	// acceleration = 0;
+
 	while(l_move || r_move){
 		encdleft = trackingwheel_l.get_position() * pi * tw_diameter / 36000;
 		encdright = trackingwheel_r.get_position() * pi * tw_diameter / 36000;
@@ -63,22 +80,73 @@ void forward_pid(double TARGET_L, double TARGET_R) {
 		totalErrorRight += errorRight;
 		deltaErrorLeft = errorLeft - prevErrorLeft;
 		deltaErrorRight = errorRight - prevErrorRight;
-		powerL = base_kp * errorLeft + base_ki * totalErrorLeft + base_kd * deltaErrorLeft; // divide 25 to prevent from going insane - kp must not be too high - when ki=0.1 kd=0,  
-		powerR = base_kp * errorRight + base_ki * totalErrorRight + base_kd * deltaErrorRight;
-		printf("encdleft: %f \n", encdleft);
-		printf("encdright: %f \n", encdright);
-		lft_base.move(powerL);
-		lfb_base.move(powerL);
-		lbt_base.move(powerL);
-		lbb_base.move(powerL);
-		rft_base.move(powerR);
-		rfb_base.move(powerR);
-		rbt_base.move(powerR);
-		rbb_base.move(powerR);
+
+		imu_heading = imu_sensor.get_heading();
+
+		std::cout << "encdleft: "  << encdleft << "  ||  encdright: " << encdright << std::endl;
+
+		// current_time = pros::millis();
+		// acceleration = (current_time - start_timestamp) / 15.0;
+		// if (powerL <= targPowerL) {
+		// 	powerL += acceleration;
+		// }
+		// else {
+		// 	powerL = targPowerL;
+		// }
+		// if (powerR <= targPowerR) {
+		// 	powerR += acceleration;
+		// }
+		// else {
+		// 	powerR = targPowerR;
+		// }
+		if ( fabs(errorLeft) <= base_error) {
+			powerL = 0;
+			l_move = false;
+		}
+		else {
+			powerL = base_kp * errorLeft + base_ki * totalErrorLeft + base_kd * deltaErrorLeft;
+		}
+		if ( fabs(errorRight) <= base_error) {
+			powerR = 0;
+			r_move = false;
+		}
+		else {
+			powerR = base_kp * errorRight + base_ki * totalErrorRight + base_kd * deltaErrorRight;
+		}
+		// if (powerL > base_max_rpm) {
+		// 	powerL = base_max_rpm;
+		// }
+		// if (powerR > base_max_rpm) {
+		// 	powerR = base_max_rpm;
+		// }
+		
+		// if (imu_heading > 90) {
+		// 	powerR -= 20;
+		// }
+		// else if (imu_heading < 90) {
+		// 	powerL -= 20;
+		// }
+		lft_base.move_velocity(powerL);
+		lfb_base.move_velocity(powerL);
+		lbt_base.move_velocity(powerL);
+		lbb_base.move_velocity(powerL);
+		rft_base.move_velocity(powerR);
+		rfb_base.move_velocity(powerR);
+		rbt_base.move_velocity(powerR);
+		rbb_base.move_velocity(powerR);
 		prevErrorLeft = errorLeft;
 		prevErrorRight = errorRight;
 		pros::delay(2);
 	}
+	std::cout << "at target" << std::endl;
+	lft_base.move_velocity(0);
+	lfb_base.move_velocity(0);
+	lbt_base.move_velocity(0);
+	lbb_base.move_velocity(0);
+	rft_base.move_velocity(0);
+	rfb_base.move_velocity(0);
+	rbt_base.move_velocity(0);
+	rbb_base.move_velocity(0);
 }
 
 bool l_brake = false;
@@ -170,7 +238,14 @@ void cata_control_new() {
 					rc.brake();
 					pros::delay(2);
 					cata_state = 1;
+					step_l = false;
+					step_r = false;
 				}
+				// else if ( (posL >= mesh_angle || posL <= firing_angle) && (posR >= mesh_angle || posR <= firing_angle)) {
+				// 	if (fabs(posL - posR) <= 7) {
+				// 		cata_state = 2;
+				// 	}
+				// }
 				else {
 					// std::cout << "cata jammed" << std::endl;
 					std::cout << "reset cata" << std::endl;
@@ -178,7 +253,6 @@ void cata_control_new() {
 				}
 				break;
 			case 1: //meshing
-				std::cout << rc.get_voltage() / 1000 << std::endl;
 				// std::cout << "mesh" << std::endl;
 				if (posL < mesh_angle) {
 					lc.move(-40);
@@ -204,7 +278,7 @@ void cata_control_new() {
 				}
 				if (step_r) {
 					cata_state = 2;
-					rewind_target = 5;
+					rewind_target = 130;
 					step_l = false;
 					step_r = false;
 					// std::cout << "cata_state" << std::endl;
@@ -213,85 +287,74 @@ void cata_control_new() {
 				}
 				break;
 			case 2: //stepping
-				std::cout << rc.get_voltage() / 1000 << std::endl;
-				if (posL <= 180) {
-					lc.move(-127);
-				}
-				else {
-					lc.move(10);
-					step_l = true;
-				}
-				if (posR <= 180) {
-					rc.move(-127);
-				}
-				else {
-					rc.move(10);
-					step_r = true;
-				}
-				if (step_r) {
-					cata_state = 3;
-					// step_l = false;
-					step_r = false;
-				}
-
-
-				// std::cout << rewind_target << std::endl;
-				// std::cout << "posL " << posL << std::endl;
-				// std::cout << "posR " << posR << std::endl;
+				std::cout << rewind_target << std::endl;
+				std::cout << "posL " << posL << std::endl;
+				std::cout << "posR " << posR << std::endl;
 				
-				// if (posL >= 350) {
-				// 	posL -= 360;
-				// }
-				// if (posR >= 350) {
-				// 	posR -= 360;
-				// }
+				if (posL >= 350) {
+					posL -= 360;
+				}
+				if (posR >= 350) {
+					posR -= 360;
+				}
+
+				std::cout << "posL " << posL << std::endl;
+				std::cout << "posR " << posR << std::endl;
 				// errorL = rewind_target - posL;
 				// errorR = rewind_target - posR;
 				// total_error_l += errorL;
 				// total_error_r += errorR;
-				// if (rewind_target <= posL) {
-				// 	step_l = true;
-				// 	// lc.move(10);
-				// 	std::cout << "1" << std::endl;
-				// 	// pros::delay(2);
-				// }
-				// else {
-				// 	step_l = false;
-				// 	lc.move(-100 - (cata_kp * fabs(errorL)) - (cata_ki * total_error_l));
-				// 	std::cout << "2" << std::endl;
-				// 	// pros::delay(2);
-				// }
-				// if (rewind_target <= posR) {
-				// 	step_r = true;
-				// 	// rc.move(10);
-				// 	std::cout << "3" << std::endl;
-				// 	// pros::delay(2);
-				// }
-				// else {
-				// 	step_r = false;
-				// 	rc.move(-127 - (cata_kp * fabs(errorR)) -(cata_ki * total_error_r));
-				// 	std::cout << "4" << std::endl;
-				// 	// pros::delay(2);
-				// }
-				// if (step_l && step_r) {
-				// 	rewind_target += 1; //this is where stepping angle is set 
-				// 	std::cout << "5" << std::endl;
-				// 	// pros::delay(2);
-				// }
-				// if (posL >= firing_angle) {
-				// 	lc.move(25);
-				// 	// pros::delay(2);
-				// }
-				// if (posR >= firing_angle) {
-				// 	rc.move(10);
-				// 	// pros::delay(2);
-				// }
-				// if (rewind_target >= firing_angle) {
-				// 	lc.move(10);
-				// 	rc.move(10);
-				// 	// pros::delay(2);
-				// 	cata_state = 3;
-				// }
+				if (rewind_target <= posL) {
+					step_l = true;
+					// lc.move(10);
+					std::cout << "left at step target" << std::endl;
+					// pros::delay(2);
+				}
+				else {
+					step_l = false;
+					lc.move_velocity(-100); // - (cata_kp * fabs(errorL)) - (cata_ki * total_error_l));
+					std::cout << "left moving" << std::endl;
+					// pros::delay(2);
+				}
+				if (rewind_target <= posR) {
+					step_r = true;
+					// rc.move(10);
+					std::cout << "right at step target3" << std::endl;
+					// pros::delay(2);
+				}
+				else {
+					step_r = false;
+					rc.move_velocity(-100); // - (cata_kp * fabs(errorR)) -(cata_ki * total_error_r));
+					std::cout << "right moving" << std::endl;
+					// pros::delay(2);
+				}
+				if (step_l && step_r) {
+					rewind_target += 1; //this is where stepping angle is set 
+					std::cout << "done stepping" << std::endl;
+					// pros::delay(2);
+				}
+				if (posL >= firing_angle) {
+					lc.move(25);
+					// pros::delay(2);
+				}
+				if (posR >= firing_angle) {
+					rc.move(25);
+					// pros::delay(2);
+				}
+				if (rewind_target >= firing_angle) {
+					lc.move(25);
+					rc.move(25);
+					// pros::delay(2);
+					cata_state = 3;
+				}
+				if (posL == firing_angle && posR == firing_angle) {
+					lc.move(25);
+					rc.move(25);
+					pros::delay(10);
+					lc.move(0);
+					rc.move(0);
+					cata_state = 3;
+				}
 				// std::cout << "powerL " << -100 - (cata_kp * fabs(errorL)) - (cata_ki * total_error_l) << std::endl;
 				// std::cout << "powerR " << -127 - (cata_kp * fabs(errorR)) -(cata_ki * total_error_r) << std::endl;
 
@@ -301,12 +364,12 @@ void cata_control_new() {
 			case 3:
 				// std::cout << "ready" << std::endl;
 				if (shoot) {
-					lc.move_velocity(-127);
-					rc.move_velocity(-127);
-					pros::delay(400);
+					lc.move_velocity(-100);
+					rc.move_velocity(-100);
+					pros::delay(300);
 					lc.move(10);
 					rc.move(10);
-					cata_state = 1;
+					cata_state = 0;
 					shoot = false;
 				}
 				else {
@@ -399,7 +462,7 @@ void initialize() {
 	//front rollers
     pros::Motor front_roller(front_roller_motor, pros::E_MOTOR_GEARSET_18, true, pros::E_MOTOR_ENCODER_DEGREES);
 
-	pros::Task cata(cata_control_new);
+	// pros::Task cata(cata_control_new);
 	pros::Task flipper(flipper_pid);
 }
 
@@ -409,6 +472,7 @@ void competition_initialize() {}
 
 void autonomous() {
 	pros::Motor front_roller(front_roller_motor, pros::E_MOTOR_GEARSET_18, true, pros::E_MOTOR_ENCODER_DEGREES);
+	forward_pid(600, 600);
 	
 }
 
