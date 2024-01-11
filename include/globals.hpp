@@ -25,7 +25,8 @@
 #define base_diameter 232
 
 #define base_error 2
-#define base_max_rpm 250
+#define base_max_rpm 400
+#define turn_max_rpm 250
 
 //base pid - forward / backward
 #define base_kp 1.0 // 0.8, 0.76
@@ -33,7 +34,7 @@
 #define base_kd 22 // 5, 6
 
 //base pid - turning
-#define turn_kp 1.2
+#define turn_kp 1.4
 #define turn_ki 0
 #define turn_kd 0
 
