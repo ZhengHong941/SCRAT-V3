@@ -175,187 +175,244 @@ void right_brake() {
 // }
 
 bool shoot = false;
-int cata_state = 0;
-float posL;
-float posR;
-int firing_angle = 150;
-int mesh_angle = 359;
-int rewind_target;
-bool step_l;
-bool step_r;
 
-float total_error_l;
-float total_error_r;
-float errorL;
-float errorR;
+void cata_pid(){
+    using namespace pros;
+    pros::Motor fc(fc_motor);
+    pros::Motor bc(bc_motor);
+    pros::Rotation catarot(catarot_port);
 
-void cata_control_new() {
-	pros::Motor lc(lc_motor);
-	pros::Motor rc(rc_motor);
-    pros::Rotation catarot_l(catarot_l_port);
-	pros::Rotation catarot_r(catarot_r_port);
+	double currentPos;
+	double cata_error;
+	double prev_cata_error;
+	double total_cata_error;
+	double cata_d;
+	double correctingPow;
 
-	while (true) {
-		posL = catarot_l.get_angle() / 100;
-		posR = catarot_r.get_angle() / 100;
-		step_l = false;
-		step_r = false;
-
-		// state 0 - check angles. if beyond firing angle, proceed to state 1.
-		// state 1 - mesh gears. meshing should be around 358 to 5 degrees. after meshing, proceed to state 2.
-		// state 2 - wind cata to loading position. loading position is about 145 to 150 degrees.
-		// state 3 - ready to fire. if shoot is true, fire and set state to 0.
-
-		switch(cata_state) {
-			case 0:
-				if (posL > firing_angle && posR > firing_angle) {
-					lc.brake();
-					rc.brake();
-					pros::delay(2);
-					cata_state = 1;
-					step_l = false;
-					step_r = false;
-				}
-				// else if ( (posL >= mesh_angle || posL <= firing_angle) && (posR >= mesh_angle || posR <= firing_angle)) {
-				// 	if (fabs(posL - posR) <= 7) {
-				// 		cata_state = 2;
-				// 	}
-				// }
-				else {
-					// std::cout << "cata jammed" << std::endl;
-					std::cout << "reset cata" << std::endl;
-					std::cout << posL << " : " << posR << std::endl;
-				}
-				break;
-			case 1: //meshing
-				// std::cout << "mesh" << std::endl;
-				if (posL < mesh_angle) {
-					lc.move(-40);
-					pros::delay(2);
-					// std::cout << "posL Mesh " << posL << std::endl;
-				}
-				if (posL >= mesh_angle || posL <= firing_angle) {
-					lc.move(10);
-					pros::delay(2);
-					step_l = true;
-					// std::cout << "posL M "  << posL << std::endl;
-				}
-				if (posR < mesh_angle) {
-					rc.move(-40);
-					pros::delay(2);
-					// std::cout << "posR Mesh "  << posR << std::endl;
-				}
-				if (posR >= mesh_angle || posR <= firing_angle) {
-					rc.move(10);
-					pros::delay(2);
-					step_r = true;
-					// std::cout << "posR M "  << posR << std::endl;
-				}
-				if (step_r) {
-					cata_state = 2;
-					rewind_target = 130;
-					step_l = false;
-					step_r = false;
-					// std::cout << "cata_state" << std::endl;
-					total_error_l = 0;
-					total_error_r = 0;
-				}
-				break;
-			case 2: //stepping
-				std::cout << rewind_target << std::endl;
-				// std::cout << "posL " << posL << std::endl;
-				// std::cout << "posR " << posR << std::endl;
-				
-				if (posL >= 350) {
-					posL -= 360;
-				}
-				if (posR >= 350) {
-					posR -= 360;
-				}
-
-				std::cout << "posL " << posL << std::endl;
-				std::cout << "posR " << posR << std::endl;
-				// errorL = rewind_target - posL;
-				// errorR = rewind_target - posR;
-				// total_error_l += errorL;
-				// total_error_r += errorR;
-				if (rewind_target <= posL) {
-					step_l = true;
-					// lc.move(10);
-					// std::cout << "left at step target" << std::endl;
-					// pros::delay(2);
-				}
-				else {
-					step_l = false;
-					lc.move_velocity(-100); // - (cata_kp * fabs(errorL)) - (cata_ki * total_error_l));
-					// std::cout << "left moving" << std::endl;
-					// pros::delay(2);
-				}
-				if (rewind_target <= posR) {
-					step_r = true;
-					// rc.move(10);
-					// std::cout << "right at step target3" << std::endl;
-					// pros::delay(2);
-				}
-				else {
-					step_r = false;
-					rc.move_velocity(-100); // - (cata_kp * fabs(errorR)) -(cata_ki * total_error_r));
-					// std::cout << "right moving" << std::endl;
-					// pros::delay(2);
-				}
-				if (step_l && step_r) {
-					rewind_target += 1; //this is where stepping angle is set 
-					std::cout << "done stepping" << std::endl;
-					// pros::delay(2);
-				}
-				if (posL >= firing_angle) {
-					lc.move(25);
-					// pros::delay(2);
-				}
-				if (posR >= firing_angle) {
-					rc.move(25);
-					// pros::delay(2);
-				}
-				if (rewind_target >= firing_angle) {
-					lc.move(25);
-					rc.move(25);
-					// pros::delay(2);
-					cata_state = 3;
-				}
-				if (posL == firing_angle && posR == firing_angle) {
-					lc.move(25);
-					rc.move(25);
-					pros::delay(10);
-					lc.move(0);
-					rc.move(0);
-					cata_state = 3;
-				}
-				// std::cout << "powerL " << -100 - (cata_kp * fabs(errorL)) - (cata_ki * total_error_l) << std::endl;
-				// std::cout << "powerR " << -127 - (cata_kp * fabs(errorR)) -(cata_ki * total_error_r) << std::endl;
-
-				// std::cout << "total_error_l " << total_error_l << std::endl;
-				// std::cout << "total_error_r " << total_error_r << std::endl;
-				break;
-			case 3:
-				// std::cout << "ready" << std::endl;
-				if (shoot) {
-					lc.move_velocity(-100);
-					rc.move_velocity(-100);
-					pros::delay(300);
-					lc.move(10);
-					rc.move(10);
-					cata_state = 0;
-					shoot = false;
-				}
-				else {
-					lc.move(10);
-					rc.move(10);
-					pros::delay(2);
-				}
-				break;
+    while(true){
+        currentPos = catarot.get_position() / 100;
+		if (currentPos > 180) {
+			currentPos -= 360;
 		}
-	}
+        cata_error = cata_target - currentPos;
+        cata_d = cata_error - prev_cata_error;
+		total_cata_error += cata_error;
+        correctingPow = cata_error * cata_kp + cata_d * cata_kd + cata_power;
+		prev_cata_error = cata_error;
+		// std::cout << "correctingPow: " << correctingPow << std::endl;
+		// std::cout << "cata_error: " << cata_error << std::endl;
+		// std::cout << "currentPos: " << currentPos << std::endl;
+		// printf("CorrectingPow: %i \n", correctingPow);
+        // printf("Error: %i \n", cata_error);
+        // printf("Position: %i \n", catarot.get_position()/100);
+        if(shoot){
+            fc.move(110);
+            bc.move(110);
+            pros::delay(200);
+            shoot = false;
+			fc.move(0);
+			bc.move(0);
+            pros::delay(Catadelay);
+        }
+        else if (currentPos <= cata_target) {
+            fc.move_velocity(correctingPow);
+            bc.move_velocity(correctingPow);
+			std::cout << "correctingPow: " << correctingPow << std::endl;
+			std::cout << "cata_error: " << cata_error << std::endl;
+			std::cout << "currentPos: " << currentPos << std::endl;
+        }
+        else {
+            fc.move(0);
+            bc.move(0);
+            std::cout << "rewind done" << std::endl;
+        }
+		pros::delay(2);
+    }
 }
+
+
+
+// int cata_state = 0;
+// float posL;
+// float posR;
+// int firing_angle = 150;
+// int mesh_angle = 359;
+// int rewind_target;
+// bool step_l;
+// bool step_r;
+
+// float total_error_l;
+// float total_error_r;
+// float errorL;
+// float errorR;
+
+// void cata_control_new() {
+// 	pros::Motor lc(lc_motor);
+// 	pros::Motor rc(rc_motor);
+//     pros::Rotation catarot_l(catarot_l_port);
+// 	pros::Rotation catarot_r(catarot_r_port);
+
+// 	while (true) {
+// 		posL = catarot_l.get_angle() / 100;
+// 		posR = catarot_r.get_angle() / 100;
+// 		step_l = false;
+// 		step_r = false;
+
+// 		// state 0 - check angles. if beyond firing angle, proceed to state 1.
+// 		// state 1 - mesh gears. meshing should be around 358 to 5 degrees. after meshing, proceed to state 2.
+// 		// state 2 - wind cata to loading position. loading position is about 145 to 150 degrees.
+// 		// state 3 - ready to fire. if shoot is true, fire and set state to 0.
+
+// 		switch(cata_state) {
+// 			case 0:
+// 				if (posL > firing_angle && posR > firing_angle) {
+// 					lc.brake();
+// 					rc.brake();
+// 					pros::delay(2);
+// 					cata_state = 1;
+// 					step_l = false;
+// 					step_r = false;
+// 				}
+// 				// else if ( (posL >= mesh_angle || posL <= firing_angle) && (posR >= mesh_angle || posR <= firing_angle)) {
+// 				// 	if (fabs(posL - posR) <= 7) {
+// 				// 		cata_state = 2;
+// 				// 	}
+// 				// }
+// 				else {
+// 					// std::cout << "cata jammed" << std::endl;
+// 					std::cout << "reset cata" << std::endl;
+// 					std::cout << posL << " : " << posR << std::endl;
+// 				}
+// 				break;
+// 			case 1: //meshing
+// 				// std::cout << "mesh" << std::endl;
+// 				if (posL < mesh_angle) {
+// 					lc.move(-40);
+// 					pros::delay(2);
+// 					// std::cout << "posL Mesh " << posL << std::endl;
+// 				}
+// 				if (posL >= mesh_angle || posL <= firing_angle) {
+// 					lc.move(10);
+// 					pros::delay(2);
+// 					step_l = true;
+// 					// std::cout << "posL M "  << posL << std::endl;
+// 				}
+// 				if (posR < mesh_angle) {
+// 					rc.move(-40);
+// 					pros::delay(2);
+// 					// std::cout << "posR Mesh "  << posR << std::endl;
+// 				}
+// 				if (posR >= mesh_angle || posR <= firing_angle) {
+// 					rc.move(10);
+// 					pros::delay(2);
+// 					step_r = true;
+// 					// std::cout << "posR M "  << posR << std::endl;
+// 				}
+// 				if (step_r) {
+// 					cata_state = 2;
+// 					rewind_target = 130;
+// 					step_l = false;
+// 					step_r = false;
+// 					// std::cout << "cata_state" << std::endl;
+// 					total_error_l = 0;
+// 					total_error_r = 0;
+// 				}
+// 				break;
+// 			case 2: //stepping
+// 				std::cout << rewind_target << std::endl;
+// 				// std::cout << "posL " << posL << std::endl;
+// 				// std::cout << "posR " << posR << std::endl;
+				
+// 				if (posL >= 350) {
+// 					posL -= 360;
+// 				}
+// 				if (posR >= 350) {
+// 					posR -= 360;
+// 				}
+
+// 				std::cout << "posL " << posL << std::endl;
+// 				std::cout << "posR " << posR << std::endl;
+// 				// errorL = rewind_target - posL;
+// 				// errorR = rewind_target - posR;
+// 				// total_error_l += errorL;
+// 				// total_error_r += errorR;
+// 				if (rewind_target <= posL) {
+// 					step_l = true;
+// 					// lc.move(10);
+// 					// std::cout << "left at step target" << std::endl;
+// 					// pros::delay(2);
+// 				}
+// 				else {
+// 					step_l = false;
+// 					lc.move_velocity(-100); // - (cata_kp * fabs(errorL)) - (cata_ki * total_error_l));
+// 					// std::cout << "left moving" << std::endl;
+// 					// pros::delay(2);
+// 				}
+// 				if (rewind_target <= posR) {
+// 					step_r = true;
+// 					// rc.move(10);
+// 					// std::cout << "right at step target3" << std::endl;
+// 					// pros::delay(2);
+// 				}
+// 				else {
+// 					step_r = false;
+// 					rc.move_velocity(-100); // - (cata_kp * fabs(errorR)) -(cata_ki * total_error_r));
+// 					// std::cout << "right moving" << std::endl;
+// 					// pros::delay(2);
+// 				}
+// 				if (step_l && step_r) {
+// 					rewind_target += 1; //this is where stepping angle is set 
+// 					std::cout << "done stepping" << std::endl;
+// 					// pros::delay(2);
+// 				}
+// 				if (posL >= firing_angle) {
+// 					lc.move(25);
+// 					// pros::delay(2);
+// 				}
+// 				if (posR >= firing_angle) {
+// 					rc.move(25);
+// 					// pros::delay(2);
+// 				}
+// 				if (rewind_target >= firing_angle) {
+// 					lc.move(25);
+// 					rc.move(25);
+// 					// pros::delay(2);
+// 					cata_state = 3;
+// 				}
+// 				if (posL == firing_angle && posR == firing_angle) {
+// 					lc.move(25);
+// 					rc.move(25);
+// 					pros::delay(10);
+// 					lc.move(0);
+// 					rc.move(0);
+// 					cata_state = 3;
+// 				}
+// 				// std::cout << "powerL " << -100 - (cata_kp * fabs(errorL)) - (cata_ki * total_error_l) << std::endl;
+// 				// std::cout << "powerR " << -127 - (cata_kp * fabs(errorR)) -(cata_ki * total_error_r) << std::endl;
+
+// 				// std::cout << "total_error_l " << total_error_l << std::endl;
+// 				// std::cout << "total_error_r " << total_error_r << std::endl;
+// 				break;
+// 			case 3:
+// 				// std::cout << "ready" << std::endl;
+// 				if (shoot) {
+// 					lc.move_velocity(-100);
+// 					rc.move_velocity(-100);
+// 					pros::delay(300);
+// 					lc.move(10);
+// 					rc.move(10);
+// 					cata_state = 0;
+// 					shoot = false;
+// 				}
+// 				else {
+// 					lc.move(10);
+// 					rc.move(10);
+// 					pros::delay(2);
+// 				}
+// 				break;
+// 		}
+// 	}
+// }
 
 
 bool IntakeTargetPosUp = true;
@@ -372,6 +429,8 @@ void flipper_pid() {
     pros::Motor f_roller(flipper_roller_motor);
     pros::Rotation flipperrot(flipperrot_port);
 
+	int currentPos;
+
     // IntakeTargetPosUp = true; //move to up position    
     // IntakeTargetPosUp = false; //move to down position
 
@@ -379,7 +438,7 @@ void flipper_pid() {
     // RollerPow = -127; //roller intake
     //RollerPow = 0; //roller stop
     while (true) {
-        int currentPos = flipperrot.get_position() / 100;
+        currentPos = flipperrot.get_position() / 100;
 		
         if (IntakeTargetPosUp) {
             flipper_error = flipper_targetUp - currentPos;
@@ -389,12 +448,11 @@ void flipper_pid() {
 		}
 
         flipper_d = flipper_error - prev_flipper_error;
-        prev_flipper_error = flipper_error;
         total_flipper_error += flipper_error;
         flipper_pow = flipper_error * flipper_kp + total_flipper_error * flipper_ki + flipper_d * flipper_kd;
         f_arm.move(flipper_pow);
         f_roller.move(RollerPow);
-        
+        prev_flipper_error = flipper_error;
 		// printf("flipper_rot: %d \n", currentPos);
         // printf("flipper power: %i \n", flipper_pow);
     }
@@ -416,20 +474,20 @@ void initialize() {
 
 	pros::Rotation trackingwheel_l(twl_port);
 	pros::Rotation trackingwheel_r(twr_port);
-	// trackingwheel_l.set_position(0);
-	// trackingwheel_r.set_position(0);
 	trackingwheel_r.set_reversed(true);
 
 	// pros::Imu imu_sensor(imu_port);
 	// imu_sensor.reset();
 
 	//cata
-	pros::Motor lc(lc_motor, pros::E_MOTOR_GEARSET_36, true, pros::E_MOTOR_ENCODER_DEGREES);
-	pros::Motor rc(rc_motor, pros::E_MOTOR_GEARSET_36, false, pros::E_MOTOR_ENCODER_DEGREES);
-    pros::Rotation catarot_l(catarot_l_port);
-	pros::Rotation catarot_r(catarot_r_port);
-	catarot_l.set_reversed(true);
-	catarot_r.set_reversed(true);
+	pros::Motor fc(fc_motor, pros::E_MOTOR_GEARSET_18, false, pros::E_MOTOR_ENCODER_DEGREES);
+	pros::Motor bc(bc_motor, pros::E_MOTOR_GEARSET_18, true, pros::E_MOTOR_ENCODER_DEGREES);
+    pros::Rotation catarot(catarot_port);
+	// catarot.set_reversed(true);
+	// pros::Rotation catarot_l(catarot_l_port);
+	// pros::Rotation catarot_r(catarot_r_port);
+	// catarot_l.set_reversed(true);
+	// catarot_r.set_reversed(true);
 
 	//flipper
     pros::Motor f_arm(flipper_motor, pros::E_MOTOR_GEARSET_18, false, pros::E_MOTOR_ENCODER_DEGREES);
@@ -440,6 +498,7 @@ void initialize() {
     pros::Motor front_roller(front_roller_motor, pros::E_MOTOR_GEARSET_18, true, pros::E_MOTOR_ENCODER_DEGREES);
 
 	// pros::Task cata(cata_control_new);
+	// pros::Task cata(cata_pid);
 	pros::Task flipper(flipper_pid);
 }
 
@@ -448,28 +507,26 @@ void disabled() {}
 void competition_initialize() {}
 
 void autonomous() {
-	// pros::Motor lc(lc_motor, pros::E_MOTOR_GEARSET_36, true, pros::E_MOTOR_ENCODER_DEGREES);
-	// pros::Motor rc(rc_motor, pros::E_MOTOR_GEARSET_36, false, pros::E_MOTOR_ENCODER_DEGREES);
-    // pros::Rotation catarot_l(catarot_l_port);
-	// pros::Rotation catarot_r(catarot_r_port);
-	// pros::Motor front_roller(front_roller_motor, pros::E_MOTOR_GEARSET_18, true, pros::E_MOTOR_ENCODER_DEGREES);
 	pros::Motor front_roller(front_roller_motor);
-	front_roller.move(-127);
-	forward_pid(1030, 1030);
-	// pros::delay(100);
-	turn_pid(70, true);
-	// shoot = true;
-	// pros::delay(100);
-	forward_pid(400, 400);
-	pros::delay(500);
-	// forward_pid()
+
+	turn_pid(20, false);
+	forward_pid(1000, 1000);
+	// turn_pid(45, false);
+
+	// forward_pid(1200, 1200);
 	
+	// front_roller.move(-127);
+	// forward_pid(1030, 1030);
+	// // pros::delay(100);
+	// turn_pid(70, true);
+	// // shoot = true;
+	// // pros::delay(100);
+	// forward_pid(400, 400);
+	// pros::delay(500);	
 	
-	
-	front_roller.move(0);
+	// front_roller.move(0);
 	
 }
-
 
 void opcontrol() {
 	//controller
@@ -484,23 +541,19 @@ void opcontrol() {
 	pros::Motor rft_base(rft_port);
 	pros::Motor rbb_base(rbb_port);
 	pros::Motor rbt_base(rbt_port);
-	
+
 	//cata motors
-    // pros::Motor lc(lc_motor, pros::E_MOTOR_GEARSET_36, true, pros::E_MOTOR_ENCODER_DEGREES);
-	// pros::Motor rc(rc_motor, pros::E_MOTOR_GEARSET_36, false, pros::E_MOTOR_ENCODER_DEGREES);
-    // pros::Rotation catarot_l(catarot_l_port);
-	// pros::Rotation catarot_r(catarot_r_port);
+	pros::Motor fc(fc_motor);
+	pros::Motor bc(bc_motor);
 
 	//front rollers
     pros::Motor front_roller(front_roller_motor, pros::E_MOTOR_GEARSET_18, true, pros::E_MOTOR_ENCODER_DEGREES);
 
 	bool tankdrive = true; //drive mode control
-	// uint32_t timestamp1;
-	// uint32_t timestamp2;
+	double left, right; //base control
+	double power, turn;
+
 	while(true){
-        //base control
-        double left, right;
-        
 		if(master.get_digital_new_press(DIGITAL_A)) tankdrive = !tankdrive; //tank toggle
 
         if(tankdrive) {
@@ -508,8 +561,8 @@ void opcontrol() {
             right = master.get_analog(ANALOG_RIGHT_Y);
         }     
         else {
-            double power =  master.get_analog(ANALOG_LEFT_Y);
-            double turn = master.get_analog(ANALOG_RIGHT_X);
+            power =  master.get_analog(ANALOG_LEFT_Y);
+            turn = master.get_analog(ANALOG_RIGHT_X);
             left = power + turn;
             right = power - turn;
         }
@@ -522,17 +575,11 @@ void opcontrol() {
         rbb_base.move(right);
 		rbt_base.move(right);
 
-		// if(master.get_digital(DIGITAL_R1) && CataIdle){
-		// 	CataIdle = false;
-		// 	printf("Cata FIring flag 1: %d \n", CataIdle);
-        // }
-
 		if(master.get_digital(DIGITAL_R1)){
 			shoot = true;
         }
 
 		//flipper control
-        //update target speeds for I and update target position for flipper
         if(master.get_digital_new_press(DIGITAL_Y))
             IntakeTargetPosUp = true; //move to up position
         else if(master.get_digital_new_press(DIGITAL_B))
@@ -546,27 +593,34 @@ void opcontrol() {
         else
             RollerPow = 0; //roller stop
 		
+		// if (master.get_digital(DIGITAL_R2)){
+		// 	front_roller.set_zero_position(0);
+		// 	IntakeTargetPosUp = false;
+		// 	pros::delay(400);
+		// 	RollerPow = 127;
+		// 	pros::delay(500);
+		// 	RollerPow = 0;
+		// 	pros::delay(10);
+		// 	IntakeTargetPosUp = true;
+		// 	pros::delay(10);
+    	// }
 		if (master.get_digital(DIGITAL_R2)){
-			front_roller.set_zero_position(0);
-			IntakeTargetPosUp = false;
-			pros::delay(400);
-			// timestamp1 = pros::millis();
-			// printf("time: %d \n", timestamp1);
-			RollerPow = 127;
-			pros::delay(500);
-			// timestamp2 = pros::millis();
-			// uint32_t total_time = (timestamp2 - timestamp1);
-			// double position = front_roller.get_position();
-			// double rpm = position / (total_time / 60000);
-			RollerPow = 0;
-			pros::delay(10);
-			IntakeTargetPosUp = true;
-			// printf("Total Time: %d \n", total_time);
-			// printf("Position: %d \n", position);
-			// printf("RPM: %d \n", rpm);
-			pros::delay(10);
-    }
-
+			for (int i = 1; i <= 12; i++){
+				IntakeTargetPosUp = false;
+				pros::delay(400);
+				shoot = true;
+				RollerPow = 127;
+				pros::delay(400);
+				RollerPow = 0;
+				pros::delay(10);
+				IntakeTargetPosUp = true;
+				pros::delay(400);
+				RollerPow = 127;
+				pros::delay(40);
+				RollerPow = 0;
+				pros::delay(300);
+			}
+		}
 		//side rollers control
         front_roller.move(100 * (master.get_digital(DIGITAL_L2) - master.get_digital(DIGITAL_L1)));
 

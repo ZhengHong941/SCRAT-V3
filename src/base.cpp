@@ -59,46 +59,46 @@ void forward_pid(float TARGET_L, float TARGET_R) {
 		current_time = pros::millis();
 
 		std::cout << "encdleft: "  << encdleft << "  ||  encdright: " << encdright << std::endl;
-		std::cout << "acceleration: " << acceleration << std::endl;
-		std::cout << "start_time: " << start_time << std::endl;
-		std::cout << "current_time: " << current_time << std::endl;
+		// std::cout << "acceleration: " << acceleration << std::endl;
+		// std::cout << "start_time: " << start_time << std::endl;
+		// std::cout << "current_time: " << current_time << std::endl;
 		// check if left and right reached target
 		if ( fabs(errorLeft) <= base_error) {
-			targPowerL = 0;
+			powerL = 0;
 			l_move = false;
 		}
 		else {
-			targPowerL = base_kp * errorLeft + base_ki * totalErrorLeft + base_kd * deltaErrorLeft;
+			powerL = base_kp * errorLeft + base_ki * totalErrorLeft + base_kd * deltaErrorLeft;
 		}
 		if ( fabs(errorRight) <= base_error) {
-			targPowerR = 0;
+			powerR = 0;
 			r_move = false;
 		}
 		else {
-			targPowerR = base_kp * errorRight + base_ki * totalErrorRight + base_kd * deltaErrorRight;
+			powerR = base_kp * errorRight + base_ki * totalErrorRight + base_kd * deltaErrorRight;
 		}
 
 		//set rate of change of rpm
-		if ( ((current_time - start_time) %  50) <= 1) {
-			acceleration += 20;
-		}
+		// if ( ((current_time - start_time) %  50) <= 1) {
+		// 	acceleration += 20;
+		// }
 
-		if ( (powerL < targPowerL) && ramp_l) {
-			powerL = acceleration;
-			std::cout << "ramp up left" << std::endl;
-		}
-		else {
-			ramp_l = false;
-			powerL = targPowerL;
-		}
-		if ((powerR < targPowerR) && ramp_r) {
-			powerR = acceleration;
-			std::cout << "ramp up right" << std::endl;
-		}
-		else {
-			ramp_r = false;
-			powerR = targPowerR;
-		}
+		// if ( (powerL < targPowerL) && ramp_l) {
+		// 	powerL = acceleration;
+		// 	std::cout << "ramp up left" << std::endl;
+		// }
+		// else {
+		// 	ramp_l = false;
+		// 	powerL = targPowerL;
+		// }
+		// if ((powerR < targPowerR) && ramp_r) {
+		// 	powerR = acceleration;
+		// 	std::cout << "ramp up right" << std::endl;
+		// }
+		// else {
+		// 	ramp_r = false;
+		// 	powerR = targPowerR;
+		// }
 
 		if (powerL >= base_max_rpm) {
 			powerL = base_max_rpm;
@@ -198,14 +198,14 @@ void turn_pid(double TARGET_ANGLE, bool clockwise) {
 			l_move = false;
 		}
 		else {
-			powerL = base_kp * errorLeft + base_ki * totalErrorLeft + base_kd * deltaErrorLeft;
+			powerL = turn_kp * errorLeft + turn_ki * totalErrorLeft + turn_kd * deltaErrorLeft;
 		}
 		if ( fabs(errorRight) <= base_error) {
 			powerR = 0;
 			r_move = false;
 		}
 		else {
-			powerR = base_kp * errorRight + base_ki * totalErrorRight + base_kd * deltaErrorRight;
+			powerR = turn_kp * errorRight + turn_ki * totalErrorRight + turn_kd * deltaErrorRight;
 		}
 
 		if (powerL >= turn_max_rpm) {
