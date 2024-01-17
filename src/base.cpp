@@ -100,12 +100,12 @@ void forward_pid(float TARGET_L, float TARGET_R) {
 		// 	powerR = targPowerR;
 		// }
 
-		if (powerL >= base_max_rpm) {
-			powerL = base_max_rpm;
-		}
-		if (powerR >= base_max_rpm) {
-			powerR = base_max_rpm;
-		}
+		// if (powerL >= base_max_rpm) {
+		// 	powerL = base_max_rpm;
+		// }
+		// if (powerR >= base_max_rpm) {
+		// 	powerR = base_max_rpm;
+		// }
 		lft_base.move_velocity(powerL);
 		lfb_base.move_velocity(powerL);
 		lbt_base.move_velocity(powerL);

@@ -24,19 +24,19 @@
 // distance between omniwheel is about 232 to 235 mm
 #define base_diameter 232
 
-#define base_error 2
-#define base_max_rpm 400
+#define base_error 1
+#define base_max_rpm 600
 #define turn_max_rpm 400
 
 //base pid - forward / backward
-#define base_kp 5 // 0.8, 0.76
+#define base_kp 1.3 // 0.8, 0.76
 #define base_ki 0 // 0.003
-#define base_kd 50 // 5, 6
+#define base_kd 0 // 5, 6
 
 //base pid - turning
-#define turn_kp 2
+#define turn_kp 2.8 // 2
 #define turn_ki 0
-#define turn_kd 0
+#define turn_kd 0 // 15
 
 //flipper
 #define flipper_motor 11
@@ -65,7 +65,7 @@
 #define cata_kd 50
 #define Catadelay 2
 // #define allowedError 2
-#define cata_target 80 //63 //130
+// #define cata_target 80 //63 //130
 #define cata_power 0
 
 // #define loading_pos 0
