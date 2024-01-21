@@ -61,13 +61,13 @@ void cata_pid(){
 	double correctingPow;
 
     while(true){
-		if (arm_up && (!half_draw)) {
-			cata_target = 80;
-			// std::cout << "cata down" << std::endl;
+		if ( (!arm_up) && half_draw) {
+			cata_target = 45;
 		}
 		else {
-			cata_target = 45; // 45
+			cata_target = 80;
 		}
+
         cata_currentPos = catarot.get_position() / 100;
 		if (cata_currentPos > 180) {
 			cata_currentPos -= 360;
@@ -75,7 +75,7 @@ void cata_pid(){
         cata_error = cata_target - cata_currentPos;
         cata_d = cata_error - prev_cata_error;
 		total_cata_error += cata_error;
-        correctingPow = cata_error * cata_kp + cata_d * cata_kd;
+        correctingPow = cata_error * cata_kp + cata_d * cata_kd + cata_power;
 		prev_cata_error = cata_error;
 		// std::cout << "correctingPow: " << correctingPow << std::endl;
 		// std::cout << "cata_error: " << cata_error << std::endl;
@@ -84,25 +84,44 @@ void cata_pid(){
         // printf("Error: %i \n", cata_error);
         // printf("Position: %i \n", catarot.get_position()/100);
         if(shoot){
-            fc.move(110);
-            bc.move(110);
+            fc.move(127);
+            bc.move(127);
             pros::delay(200);
-            shoot = false;
-			fc.move(0);
-			bc.move(0);
-            pros::delay(Catadelay);
+			shoot = false;
+			// fc.move(127);
+			// bc.move(127);
+			// pros::delay(2);
+			// cata_currentPos = catarot.get_position() / 100;
+			// if (cata_currentPos < 70) {
+			// 	shoot = false;
+			// 	pros::delay(Catadelay);
+			// }
+			// else {
+			// 	shoot = true;
+			// 	std::cout << "retry firing" << std::endl;
+			// 	pros::delay(2);
+			// }
         }
         else if (cata_currentPos <= cata_target) {
-            fc.move_velocity(correctingPow);
-            bc.move_velocity(correctingPow);
-			std::cout << "correctingPow: " << correctingPow << std::endl;
-			std::cout << "cata_error: " << cata_error << std::endl;
-			std::cout << "currentPos: " << cata_currentPos << std::endl;
+            if ( (cata_target - cata_currentPos) >= 1) {
+				shoot = false;
+				fc.move_velocity(correctingPow);
+				bc.move_velocity(correctingPow);
+				// std::cout << "rewinding" << std::endl;
+				std::cout << "correctingPow: " << correctingPow << std::endl;
+				std::cout << "cata_error: " << cata_error << std::endl;
+				std::cout << "currentPos: " << cata_currentPos << std::endl;
+				std::cout << "actual velocity: " << fc.get_actual_velocity() << std::endl;
+				std::cout << "motor efficiency: " << fc.get_efficiency() << std::endl;
+				// if ( fabs(fc.get_actual_velocity()) < 3 ) {
+				// 	// std::cout << "cata jammed" << std::endl;
+				// }
+			}
         }
         else {
             fc.move(0);
             bc.move(0);
-            std::cout << "rewind done" << std::endl;
+            std::cout << "done" << std::endl;
         }
 		pros::delay(2);
     }
@@ -198,7 +217,7 @@ void initialize() {
 	//front rollers
     pros::Motor front_roller(front_roller_motor, pros::E_MOTOR_GEARSET_18, true, pros::E_MOTOR_ENCODER_DEGREES);
 
-	// pros::Task cata(cata_pid);
+	pros::Task cata(cata_pid);
 	pros::Task flipper(flipper_pid);
 }
 
@@ -209,7 +228,12 @@ void competition_initialize() {}
 void autonomous() {
 	pros::Motor front_roller(front_roller_motor);
 
-	turn_pid(20, false);
+	front_roller.move(-127);
+	forward_pid(950, 950);
+	turn_pid(45, false);
+
+
+	// turn_pid(20, false);
 	// forward_pid(1000, 1000);
 	// forward_pid()
 	// turn_pid(40, false);
@@ -276,6 +300,9 @@ void opcontrol() {
 		if(master.get_digital_new_press(DIGITAL_R1)){
 			shoot = true;
         }
+		if(master.get_digital_new_press(DIGITAL_LEFT)) {
+			shoot = true;
+		}
 
 		//flipper control
         if(master.get_digital_new_press(DIGITAL_Y))
@@ -292,15 +319,18 @@ void opcontrol() {
             RollerPow = 0; //roller stop
 
 		if (master.get_digital(DIGITAL_R2)){
+			// pros::delay(12000);
+
 			half_draw = true;
+			uint32_t cycle_start_time = pros::millis();
 			for (int i = 1; i <= 5; i++){
 				IntakeTargetPosUp = false;
-				pros::delay(400);
+				pros::delay(400); // 400
 				shoot = true;
 				RollerPow = 127;
-				pros::delay(200); // 400
+				pros::delay(250); // 400
 				RollerPow = 0;
-				pros::delay(250);
+				pros::delay(150);
 				IntakeTargetPosUp = true;
 				pros::delay(400);
 				RollerPow = 127;
@@ -309,36 +339,21 @@ void opcontrol() {
 				pros::delay(500); // 300
 				arm_up = true;
 			}
+			pros::delay(400); // 400
+			shoot = true;
+			pros::delay(200);
+			std::cout << "cycle time: " << (pros::millis() - cycle_start_time) << std::endl;
 			half_draw = false;
+
+
+			// turn_pid(25, false);
+			// front_roller.move(-127);
+			// forward_pid(1000, 1000);
+			// // turn_pid();	
+			
+			// front_roller.move(0);
 		}
-		// if (master.get_digital(DIGITAL_R2)){
-		// 	for (int i = 1; i <= 3; i++){
-		// 		IntakeTargetPosUp = false;
-		// 		pros::delay(550);
-		// 		shoot = true;
-		// 		pros::delay(250);
-		// 		while (true) {
-		// 			if (cata_currentPos < 5) {
-		// 				RollerPow = 127;
-		// 				std::cout << "cata up" << std::endl;
-		// 				std::cout << cata_currentPos << std::endl;
-		// 				pros::delay(2);
-		// 			}
-		// 			else {
-		// 				RollerPow = 0;
-		// 				pros::delay(2);
-		// 				IntakeTargetPosUp = true;
-		// 				std::cout << "cata rewinding" << std::endl;
-		// 				break;
-		// 			}
-		// 		}
-		// 		pros::delay(400);
-		// 		RollerPow = 127;
-		// 		pros::delay(10);
-		// 		RollerPow = 0;
-		// 		pros::delay(300);
-		// 	}
-		// }
+		
 		//side rollers control
         front_roller.move(100 * (master.get_digital(DIGITAL_L2) - master.get_digital(DIGITAL_L1)));
 
