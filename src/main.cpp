@@ -323,7 +323,7 @@ void opcontrol() {
 
 			half_draw = true;
 			uint32_t cycle_start_time = pros::millis();
-			for (int i = 1; i <= 5; i++){
+			for (int i = 1; i <= 2; i++){
 				IntakeTargetPosUp = false;
 				pros::delay(400); // 400
 				shoot = true;
@@ -338,6 +338,7 @@ void opcontrol() {
 				RollerPow = 0;
 				pros::delay(500); // 300
 				arm_up = true;
+				// pros::delay(800);
 			}
 			pros::delay(400); // 400
 			shoot = true;
