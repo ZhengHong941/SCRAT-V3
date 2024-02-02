@@ -53,17 +53,15 @@
 #define front_roller_motor 18
 
 //cata
-#define fc_motor 10
-#define bc_motor 19
-#define catarot_port 9
-#define catarot_l_port 9
-#define catarot_r_port 20
+#define fc_motor 10 // 10
+#define bc_motor 19 // 19
+#define catarot_port 9 // 9
 
 //cata pid
 #define cata_kp 6
 #define cata_ki 0 //0.009
 #define cata_kd 50
-#define Catadelay 2
+#define Catadelay 100
 // #define allowedError 2
 // #define cata_target 80 //63 //130
 #define cata_power 0

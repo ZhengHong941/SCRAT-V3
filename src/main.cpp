@@ -47,6 +47,7 @@ double cata_currentPos = 0;
 int cata_target = 80;
 bool arm_up = true;
 bool half_draw = false;
+// bool cata_jammed = false;
 
 void cata_pid(){
     using namespace pros;
@@ -62,7 +63,7 @@ void cata_pid(){
 
     while(true){
 		if ( (!arm_up) && half_draw) {
-			cata_target = 45;
+			cata_target = 65; // 45
 		}
 		else {
 			cata_target = 80;
@@ -88,6 +89,7 @@ void cata_pid(){
             bc.move(127);
             pros::delay(200);
 			shoot = false;
+			// pros::delay(Catadelay);
 			// fc.move(127);
 			// bc.move(127);
 			// pros::delay(2);
@@ -112,10 +114,23 @@ void cata_pid(){
 				std::cout << "cata_error: " << cata_error << std::endl;
 				std::cout << "currentPos: " << cata_currentPos << std::endl;
 				std::cout << "actual velocity: " << fc.get_actual_velocity() << std::endl;
-				std::cout << "motor efficiency: " << fc.get_efficiency() << std::endl;
-				// if ( fabs(fc.get_actual_velocity()) < 3 ) {
-				// 	// std::cout << "cata jammed" << std::endl;
+				// std::cout << "motor efficiency: " << fc.get_efficiency() << std::endl;
+				// if ( fabs(fc.get_actual_velocity()) < 3 && (correctingPow > 50) ) {
+				// 	fc.move_velocity(200);
+				// 	bc.move_velocity(200);
+				// 	pros::delay(50);
+				// 	if ( fabs(fc.get_actual_velocity()) < 3 ) {
+				// 		fc.move(0);
+				// 		bc.move(0);
+				// 		std::cout << "cata jammed" << std::endl;
+				// 		cata_jammed = true;
+				// 		pros::delay(500);
+				// 	}
+				// 	else {
+				// 		cata_jammed = false;
+				// 	}
 				// }
+				pros::delay(2);
 			}
         }
         else {
@@ -126,6 +141,7 @@ void cata_pid(){
 		pros::delay(2);
     }
 }
+
 
 bool IntakeTargetPosUp = true;
 int RollerPow = 0;
@@ -166,7 +182,13 @@ void flipper_pid() {
 
         flipper_d = flipper_error - prev_flipper_error;
         total_flipper_error += flipper_error;
-        flipper_pow = flipper_error * flipper_kp + total_flipper_error * flipper_ki + flipper_d * flipper_kd;
+		flipper_pow = flipper_error * flipper_kp + total_flipper_error * flipper_ki + flipper_d * flipper_kd;
+        // if (cata_jammed) {
+		// 	flipper_pow = 0;
+		// }
+		// else {
+		// 	flipper_pow = flipper_error * flipper_kp + total_flipper_error * flipper_ki + flipper_d * flipper_kd;
+		// }
         f_arm.move(flipper_pow);
         f_roller.move(RollerPow);
         prev_flipper_error = flipper_error;
@@ -228,9 +250,38 @@ void competition_initialize() {}
 void autonomous() {
 	pros::Motor front_roller(front_roller_motor);
 
-	front_roller.move(-127);
-	forward_pid(950, 950);
-	turn_pid(45, false);
+	pros::delay(12000); // try 12 seconds instead
+	
+	half_draw = true;
+	// uint32_t cycle_start_time = pros::millis();
+	for (int i = 1; i <= 30; i++){
+		IntakeTargetPosUp = false;
+		pros::delay(400); // 400
+		shoot = true;
+		RollerPow = 127;
+		pros::delay(250); // 400
+		RollerPow = 0;
+		pros::delay(300); // 150
+		IntakeTargetPosUp = true;
+		pros::delay(400);
+		RollerPow = 127;
+		pros::delay(40);
+		RollerPow = 0;
+		pros::delay(500); // 300
+		arm_up = true;
+		pros::delay(200);
+	}
+	pros::delay(400); // 400
+	shoot = true;
+	pros::delay(200);
+	// std::cout << "cycle time: " << (pros::millis() - cycle_start_time) << std::endl;
+	half_draw = false;
+
+	// turn_pid(20, false);
+	// forward_pid(900, 900);
+	// front_roller.move(-127);
+	// forward_pid(950, 950);
+	// turn_pid(45, false);
 
 
 	// turn_pid(20, false);
@@ -266,14 +317,18 @@ void opcontrol() {
 	pros::Motor rbb_base(rbb_port);
 	pros::Motor rbt_base(rbt_port);
 
+	pros::Motor fc(fc_motor, pros::E_MOTOR_GEARSET_18, false, pros::E_MOTOR_ENCODER_DEGREES);
+	pros::Motor bc(bc_motor, pros::E_MOTOR_GEARSET_18, true, pros::E_MOTOR_ENCODER_DEGREES);
+
 	//front rollers
-    pros::Motor front_roller(front_roller_motor, pros::E_MOTOR_GEARSET_18, true, pros::E_MOTOR_ENCODER_DEGREES);
+    pros::Motor front_roller(front_roller_motor);
 
 	bool tankdrive = true; //drive mode control
 	double left, right; //base control
 	double power, turn;
 
 	arm_up = true;
+	half_draw = false;
 
 	while(true){
 		if(master.get_digital_new_press(DIGITAL_A)) tankdrive = !tankdrive; //tank toggle
@@ -300,9 +355,10 @@ void opcontrol() {
 		if(master.get_digital_new_press(DIGITAL_R1)){
 			shoot = true;
         }
-		if(master.get_digital_new_press(DIGITAL_LEFT)) {
-			shoot = true;
-		}
+		// if(master.get_digital(DIGITAL_LEFT)) {
+		// 	fc.move(0);
+		// 	bc.move(0);
+		// }
 
 		//flipper control
         if(master.get_digital_new_press(DIGITAL_Y))
@@ -319,11 +375,8 @@ void opcontrol() {
             RollerPow = 0; //roller stop
 
 		if (master.get_digital(DIGITAL_R2)){
-			// pros::delay(12000);
-
 			half_draw = true;
-			uint32_t cycle_start_time = pros::millis();
-			for (int i = 1; i <= 2; i++){
+			for (int i = 1; i <= 1; i++){
 				IntakeTargetPosUp = false;
 				pros::delay(400); // 400
 				shoot = true;
@@ -338,21 +391,8 @@ void opcontrol() {
 				RollerPow = 0;
 				pros::delay(500); // 300
 				arm_up = true;
-				// pros::delay(800);
 			}
-			pros::delay(400); // 400
-			shoot = true;
-			pros::delay(200);
-			std::cout << "cycle time: " << (pros::millis() - cycle_start_time) << std::endl;
-			half_draw = false;
-
-
-			// turn_pid(25, false);
-			// front_roller.move(-127);
-			// forward_pid(1000, 1000);
-			// // turn_pid();	
-			
-			// front_roller.move(0);
+			// half_draw = false;
 		}
 		
 		//side rollers control
